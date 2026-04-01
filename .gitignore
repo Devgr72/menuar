@@ -9,3 +9,8 @@ dist/
 prisma/migrations/
 *.log
 .DS_Store
+
+# AI / internal context — not for the repo
+CLAUDE.md
+.cursorrules
+docs/

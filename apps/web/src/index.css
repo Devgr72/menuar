@@ -8,3 +8,8 @@ html, body, #root {
   margin: 0;
   padding: 0;
 }
+
+/* Hide scrollbar visually while keeping scroll functionality */
+.overflow-x-auto::-webkit-scrollbar {
+  display: none;
+}
