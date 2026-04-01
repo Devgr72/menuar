@@ -14,4 +14,71 @@ model Restaurant {
   plan       String   @default("free")
   clerkOrgId String?
   createdAt  DateTime @default(now())
+
+  tables Table[]
+  menus  Menu[]
+}
+
+model Table {
+  id           String     @id @default(uuid())
+  restaurantId String
+  tableNumber  Int
+  qrCode       String     @unique
+  qrUrl        String
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  views      DishView[]
+
+  @@unique([restaurantId, tableNumber])
+}
+
+model Menu {
+  id           String   @id @default(uuid())
+  restaurantId String
+  name         String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  categories Category[]
+}
+
+model Category {
+  id        String @id @default(uuid())
+  menuId    String
+  name      String
+  sortOrder Int    @default(0)
+
+  menu   Menu   @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  dishes Dish[]
+}
+
+model Dish {
+  id           String   @id @default(uuid())
+  categoryId   String
+  name         String
+  description  String   @default("")
+  price        Float
+  isVeg        Boolean  @default(false)
+  spiceLevel   Int      @default(0)
+  allergens    String[]
+  isAvailable  Boolean  @default(true)
+  modelUrl     String?
+  thumbnailUrl String?
+  aiDescription String?
+  translations Json     @default("{}")
+  createdAt    DateTime @default(now())
+
+  category Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  views    DishView[]
+}
+
+model DishView {
+  id       String   @id @default(uuid())
+  dishId   String
+  tableId  String
+  viewedAt DateTime @default(now())
+
+  dish  Dish  @relation(fields: [dishId], references: [id], onDelete: Cascade)
+  table Table @relation(fields: [tableId], references: [id], onDelete: Cascade)
 }
