@@ -1,0 +1,21 @@
+{
+  "name": "menuar",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0"
+  },
+  "packageManager": "npm@10.8.1",
+  "overrides": {
+    "three": "0.149.0"
+  }
+}
