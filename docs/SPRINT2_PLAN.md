@@ -2,103 +2,109 @@
 
 ## What We're Building
 
-Full production pipeline so restaurants can sign up, upload their menu with dish photos,
-get 3D models generated automatically, and hand customers a QR code that opens a real AR experience.
+Full pipeline: restaurant uploads a dish photo → background removed → realistic 3D model
+generated from that photo → served in AR so customers see the actual dish on their table.
+
+Target: 200 real Indian dish photos → 200 realistic GLB models, zero cost.
 
 ```
-Restaurant signs up
-  → adds menu items + uploads dish photo
-  → background removed automatically
-  → 3D model generated from photo (free tier: HuggingFace AI)
+Restaurant uploads dish photo
+  → background removed (remove.bg)
+  → AI generates realistic 3D GLB (Tripo3D free API or Hunyuan3D 2.1)
+  → Draco-compressed, uploaded to Cloudflare R2
   → QR generated per table
-  → customer scans QR → AR experience with real model on table
+  → customer scans QR → sees realistic dish model floating on table
 ```
 
 ---
 
-## 3D Model Strategy — Free First, Paid When Ready
+## 3D Model Strategy
 
-> Research done April 2025. Meshy AI free tier has no API access — web UI only, not automatable.
-> Best zero-cost path for 200 dish models is a 3-tier approach below.
+**Goal:** Realistic models of real Indian dishes (butter chicken, biryani, dosa, etc.)
+Poly Pizza / Sketchfab are ruled out — animated/stylized models, not realistic, wrong aesthetic.
 
-### Tier 1 — Curated Free GLB Library (instant, zero cost, ~50 models)
+### Primary — Tripo3D Free API
 
-Use **Poly Pizza** (poly.pizza) and **Sketchfab** free models to cover the most common dish types.
-These are already GLB files, CC0 or CC-BY licensed, ready for WebAR today.
+Tripo3D has a confirmed free API tier. This is the primary pipeline.
 
-- **Poly Pizza**: 30+ food models, CC0 license, GLB download, low-poly style that looks clean in AR
-- **Sketchfab**: thousands of food models, filter by `cc0` tag, GLB export via platform
+- **API:** `https://api.tripo3d.ai/v2/openapi/task`
+- **Input:** Single dish photo (cleaned background PNG works best)
+- **Output:** GLB with textures — photorealistic quality
+- **Free tier:** Free API credits available (confirm exact limit at tripo3d.ai/pricing)
+- **Time per model:** ~1-3 minutes
+- **License:** Generated models are owned by you — commercial use OK
 
-**What this covers:** pizza, burger, sushi, pasta bowl, rice dish, salad, curry, dessert, steak, soup, sandwich
+```typescript
+// POST /v2/openapi/task
+{
+  "type": "image_to_model",
+  "file": {
+    "type": "png",
+    "url": "https://your-r2-url/cleaned-dish.png"
+  }
+}
+// Response: { task_id: "..." }
 
-**Action:** Download ~40 models. Create a `modelLibrary.json` mapping dish keywords → R2 model URL.
-When a dish is created, the system keyword-matches to the closest pre-built model.
-
-### Tier 2 — HuggingFace AI Generation (free, automated, ~150 models overnight)
-
-Use **Hunyuan3D 2.1** (Tencent, open-source) or **TRELLIS.2** (Microsoft, MIT) via HuggingFace
-Spaces + `gradio_client` Python script. Both produce textured GLB with PBR materials. Both are
-scriptable — you feed a dish photo, get a GLB back. No API key. No cost.
-
-**Best model for food photos: Hunyuan3D 2.1**
-- HuggingFace Space: `tencent/Hunyuan3D-2.1`
-- Input: 1 dish photo (remove.bg first for clean background)
-- Output: GLB with PBR textures — looks realistic in AR
-- Time: ~30-60 seconds per model on HuggingFace free hardware
-- Rate limit: ~50-100 requests/hour on free tier → run overnight in batches
-- License: open-source, commercial use OK
-
-**Backup: InstantMesh** (TencentARC/InstantMesh)
-- Faster (~10s per model), slightly lower quality
-- Also returns GLB, also scriptable via gradio_client
-- Use when you need speed over quality
-
-**Batch script approach** (run in `scripts/generate_models.py`):
-```python
-from gradio_client import Client
-import time, os
-
-client = Client("tencent/Hunyuan3D-2.1")
-photos = os.listdir("./dish_photos/")
-
-for i, photo in enumerate(photos):
-    result = client.predict(photo, api_name="/image_to_3d")
-    # result contains the GLB file path
-    # compress it, upload to R2
-    time.sleep(5)  # stay within rate limits
-    if i % 20 == 0:
-        time.sleep(60)  # longer pause every 20 models
+// Poll GET /v2/openapi/task/:task_id
+// When status === "success": result.model.url is the GLB download link
 ```
 
-### Tier 3 — Paid APIs (when going to production)
+### Secondary — Hunyuan3D 2.1 (HuggingFace, fully free)
 
-When the MVP is validated and restaurants are paying, switch the pipeline to:
+When Tripo3D free credits run out, fall back to Hunyuan3D 2.1 via HuggingFace.
 
-| Option | Cost | Quality | API |
-|--------|------|---------|-----|
-| **Meshy AI** (Image-to-3D) | ~$0.20/model (Pro plan $20/mo) | Best | Yes |
-| **Tripo3D** | ~$0.20-0.40/model (via fal.ai) | Excellent | Yes |
-| **Stable Fast 3D** (self-hosted) | ~$0.01/model (GPU rental) | Very good | Self-hosted |
+- **HuggingFace Space:** `tencent/Hunyuan3D-2.1`
+- **Input:** Single dish photo
+- **Output:** GLB with PBR (Physically Based Rendering) textures — realistic in AR lighting
+- **Cost:** $0 — rate limited at ~50-100 req/hour on free HuggingFace tier
+- **Strategy:** Run in batches overnight. 200 dishes = ~2-4 hours total
 
-**Note:** Meshy and Tripo have no free API tier — their free plans are web UI only.
-For MVP (under 500 models), Meshy at $0.20/model = $100 total. Negligible.
+**Calling from Node.js** — Gradio Spaces expose a REST API directly, no Python needed:
+```typescript
+// Hunyuan3D Space REST endpoint (Gradio HTTP API)
+const response = await fetch(
+  'https://tencent-hunyuan3d-2-1.hf.space/call/image_to_3d',
+  {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data: [imageUrl] }),
+  }
+);
+const { event_id } = await response.json();
+
+// Poll /call/image_to_3d/:event_id for result (Server-Sent Events)
+```
+
+### Fallback — Procedural Three.js (existing)
+
+While any model is being generated, the AR experience shows the procedural pizza model
+(our existing system). Once the real GLB is ready, model URL updates and the next load
+shows the real dish. Zero user-facing wait for the AR experience itself.
+
+### Paid Upgrade Path (when going to production scale)
+
+| Service | Cost | When |
+|---------|------|------|
+| Tripo3D paid plan | ~$0.20/model | When free credits exhausted |
+| Meshy AI (Pro $20/mo) | ~$0.02/model | At 1000+ models/month |
 
 ---
 
 ## Tech Stack Decisions
 
-| Component | MVP Choice (Free) | Paid Upgrade Path |
+| Component | Choice | Cost |
 |---|---|---|
-| Auth | Clerk (free up to 10k MAU) | Same |
-| Database | PostgreSQL + Prisma on Neon (free) | Same |
-| File Storage | Cloudflare R2 (free 10GB) | Same — R2 scales cheaply |
-| Background Removal | Remove.bg (free 50/mo trial) | Remove.bg $9/mo or rembg open-source |
-| 3D Model Generation | Hunyuan3D 2.1 via HuggingFace (free) | Meshy AI API ($0.20/model) |
-| Model Library | Poly Pizza + Sketchfab free GLBs | Per-dish AI generation |
-| Model CDN | R2 public bucket URL | Same |
-| QR Codes | `qrcode` npm package | Same |
-| Dashboard UI | apps/dashboard (React + Vite + Clerk) | Same |
-| Job Processing | In-process polling loop | BullMQ when at scale |
+| Auth | Clerk | Free up to 10k MAU |
+| Database | PostgreSQL + Prisma (Neon) | Free tier |
+| File Storage | Cloudflare R2 | Free 10GB storage, $0 egress |
+| Background Removal | Remove.bg API | Free 50/mo. Fallback: `rembg` (open-source, $0) |
+| 3D Generation (primary) | Tripo3D free API | Free tier |
+| 3D Generation (secondary) | Hunyuan3D 2.1 via HuggingFace | $0 |
+| AR fallback while generating | Procedural Three.js (existing) | $0 |
+| Model CDN | R2 public bucket | $0 egress |
+| QR Codes | `qrcode` npm package | $0 |
+| Dashboard UI | apps/dashboard (React + Vite + Clerk) | — |
+| Job Processing | In-process async polling (MVP) → BullMQ later | — |
 
 ---
 
@@ -110,66 +116,64 @@ Table       → belongs to Restaurant, has tableNumber
 Menu        → belongs to Restaurant, has many Categories
 Category    → has many Dishes, has sortOrder
 Dish        → name, price, description, isVeg, spiceLevel,
-              allergens, modelUrl (R2 CDN), modelStatus,
-              modelSource (library | ai_free | ai_paid),
+              allergens[], modelUrl (R2 CDN URL), modelStatus,
+              modelSource (tripo | hunyuan | procedural),
               photos (DishPhoto[])
-DishPhoto   → original R2 key + cleaned R2 key (after bg removal)
-DishView    → analytics: dish viewed, table, timestamp
-QrCode      → tableId, imageUrl, scanCount
+DishPhoto   → originalKey (R2), cleanedKey (R2, bg removed)
+DishView    → dishId, tableId, timestamp (analytics)
+QrCode      → tableId, qrImageUrl (R2), scanCount
+```
+
+### modelStatus values
+```
+uploaded → bg_removing → bg_done → generating_3d → compressing → ready → failed
 ```
 
 ---
 
-## Photo → 3D Model Pipeline (Free Tier)
+## Photo → 3D Model Pipeline
 
 ```
-1. Restaurant uploads dish photo (JPG/PNG) via dashboard
-2. Backend receives file (Multer)
-3. POST to Remove.bg API → clean transparent PNG (no background)
-4. Store original + cleaned photo in Cloudflare R2
-5. Try keyword match against model library (Poly Pizza / Sketchfab)
-     → if match found: set modelUrl immediately (instant)
-     → if no match: fall through to AI generation
-6. POST cleaned photo to HuggingFace Hunyuan3D 2.1 via gradio_client
-   → get taskId / prediction ID back
-7. Return "Processing…" status to dashboard
-8. Background poll every 15s until GLB result is ready
-9. Download GLB from HuggingFace result URL
-10. Run gltf-pipeline Draco compression → under 2MB
+1.  Restaurant uploads dish photo (JPG/PNG) via dashboard
+2.  Backend (Multer) receives file, uploads original to R2
+3.  POST to remove.bg API → clean transparent PNG
+      → on failure/credit exhaustion: fall back to rembg subprocess
+4.  Upload cleaned PNG to R2, update DishPhoto.cleanedKey
+5.  POST cleaned image URL to Tripo3D free API
+      → on failure/no credits: POST to Hunyuan3D 2.1 HF Space
+6.  Store taskId + modelSource in DB, set modelStatus = generating_3d
+7.  Return 202 to dashboard — "Generating model…"
+8.  Background polling loop (every 15s):
+      → Tripo: GET /v2/openapi/task/:taskId → check status
+      → HuggingFace: poll SSE stream for result
+9.  When done: download GLB from result URL
+10. Run: gltf-pipeline -i raw.glb -o compressed.glb --draco.compressionLevel 7
 11. Upload compressed GLB to R2
-12. Update Dish.modelUrl + Dish.modelStatus = "ready"
-13. Dashboard live-updates: pending → processing → ready
-```
-
-### Model Status Flow
-```
-uploaded → bg_removing → bg_done → matching_library → generating_3d → compressing → ready → failed
-```
-
-### Fallback Chain
-```
-1. Poly Pizza / Sketchfab keyword match  (instant, always works)
-2. HuggingFace AI generation             (free, ~1 min, requires photo)
-3. Procedural Three.js model             (instant, browser-side, current system)
+12. Update Dish.modelUrl + Dish.modelStatus = ready
+13. Dashboard shows green "Ready" — AR experience now loads real model
 ```
 
 ---
 
-## Background Removal — Free Options
+## Background Removal — Two Options
 
-**remove.bg** — 50 free credits/month (1 credit = 1 image). API is clean and reliable.
-Sufficient for MVP testing with 200 dishes spread over a few months.
+**Option A: remove.bg API** (preferred, best quality)
+- 50 free API calls/month
+- `POST https://api.remove.bg/v1.0/removebg` with image file
+- Returns clean PNG in response body
 
-**rembg** (self-hosted open-source alternative):
-```bash
-pip install rembg
-rembg i input.png output.png
+**Option B: rembg** (free fallback, unlimited)
+- Open-source Python library using U2-Net
+- Run as a child process from Node.js or tiny sidecar
+- Quality slightly lower but sufficient for food photos with contrasting backgrounds
+```typescript
+// Node.js child process approach
+import { execFile } from 'child_process';
+execFile('rembg', ['i', inputPath, outputPath], callback);
 ```
-- Runs locally or on any server, no API cost
-- Quality slightly lower than remove.bg for complex backgrounds
-- Use this if remove.bg credits run out during testing
 
-For the Node.js API, call rembg as a child process or set up a tiny Python FastAPI sidecar.
+**Strategy:** Use remove.bg until credits run low, then switch to rembg.
+The API service layer abstracts both — single `removeBackground(imagePath)` function.
 
 ---
 
@@ -179,8 +183,8 @@ For the Node.js API, call rembg as a child process or set up a tiny Python FastA
 GET  /api/v1/menu/:restaurantSlug          → full menu for AR experience
 GET  /api/v1/dish/:dishId                  → single dish detail
 POST /api/v1/dishes                        → create dish (dashboard)
-POST /api/v1/dishes/:dishId/photo          → upload photo + trigger pipeline
-GET  /api/v1/dishes/:dishId/model-status   → poll 3D generation status
+POST /api/v1/dishes/:dishId/photo          → upload photo + trigger full pipeline
+GET  /api/v1/dishes/:dishId/model-status   → poll model generation status
 GET  /api/v1/qr/:restaurantSlug/:tableId   → generate/fetch QR code image
 POST /api/v1/restaurants                   → create restaurant (onboarding)
 ```
@@ -191,9 +195,9 @@ POST /api/v1/restaurants                   → create restaurant (onboarding)
 
 ```bash
 # Database
-DATABASE_URL=
+DATABASE_URL=                    # Neon PostgreSQL connection string
 
-# Clerk (auth)
+# Clerk
 CLERK_SECRET_KEY=
 VITE_CLERK_PUBLISHABLE_KEY=
 
@@ -202,17 +206,14 @@ CLOUDFLARE_ACCOUNT_ID=
 R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
 R2_BUCKET_NAME=
-R2_PUBLIC_URL=               # e.g. https://pub-xxxx.r2.dev
+R2_PUBLIC_URL=                   # https://pub-xxxx.r2.dev
 
-# Background removal (free tier: 50/mo)
-REMOVE_BG_API_KEY=           # get at remove.bg — free trial
+# Background removal
+REMOVE_BG_API_KEY=               # remove.bg — 50 free/mo
 
-# HuggingFace (for AI generation — no key needed for Spaces, but add for higher rate limits)
-HUGGINGFACE_API_TOKEN=       # optional — get free at huggingface.co/settings/tokens
-
-# When upgrading to paid AI generation (later):
-# MESHY_API_KEY=             # meshy.ai — $20/mo for 1000 models
-# TRIPO_API_KEY=             # tripo3d.ai via fal.ai — pay per model
+# 3D Model Generation
+TRIPO_API_KEY=                   # tripo3d.ai — free tier key
+HUGGINGFACE_API_TOKEN=           # optional — raises HF rate limits
 
 # Frontend
 VITE_API_URL=http://localhost:3001
@@ -220,50 +221,58 @@ VITE_API_URL=http://localhost:3001
 
 ---
 
-## Build Order for Next Session
+## Build Order — Starting Now
 
-### Phase A — Data Layer (connect frontend to real DB)
-- [ ] Step 1 — Full Prisma schema + migration + seed script (10 dishes for one demo restaurant)
-- [ ] Step 2 — `GET /api/v1/menu/:restaurantSlug` working + frontend reading from it (not mock)
-- [ ] Step 3 — Cloudflare R2 bucket setup + upload helper + CORS configured
+### Phase A — Data Layer
+- [ ] 1. Full Prisma schema + `prisma migrate dev` + seed (1 restaurant, 10 Indian dishes)
+- [ ] 2. `GET /api/v1/menu/:restaurantSlug` endpoint — frontend reads real DB, not mock data
+- [ ] 3. Cloudflare R2 setup: bucket created, CORS configured, upload helper service
 
-### Phase B — Model Library (instant free 3D models)
-- [ ] Step 4 — Download ~40 food GLBs from Poly Pizza, upload to R2, create `modelLibrary.json`
-- [ ] Step 5 — Keyword match service: `getModelForDish(dishName) → R2 model URL`
-- [ ] Step 6 — Seed dishes now load real GLB models from library — AR experience shows real food
+### Phase B — Model Pipeline
+- [ ] 4. Photo upload endpoint (Multer → R2 original storage)
+- [ ] 5. remove.bg integration → cleaned PNG stored in R2
+- [ ] 6. Tripo3D API integration — submit task, store taskId
+- [ ] 7. Polling service — checks task status every 15s, downloads GLB when done
+- [ ] 8. Hunyuan3D HuggingFace fallback (same polling interface, different provider)
+- [ ] 9. gltf-pipeline compression step → final GLB under 2MB → R2
+- [ ] 10. `GET /api/v1/dishes/:dishId/model-status` endpoint for dashboard polling
 
-### Phase C — Photo Pipeline (generate models from real photos)
-- [ ] Step 7 — Photo upload endpoint (Multer → R2)
-- [ ] Step 8 — Remove.bg background removal on upload
-- [ ] Step 9 — HuggingFace Hunyuan3D integration (gradio_client Python sidecar or direct HTTP)
-- [ ] Step 10 — Polling loop + model-status endpoint + dashboard status updates
-- [ ] Step 11 — gltf-pipeline compression step before R2 upload
-
-### Phase D — QR + Dashboard
-- [ ] Step 12 — QR code generation endpoint + R2 storage
-- [ ] Step 13 — apps/dashboard scaffold (Clerk auth + menu management UI)
-- [ ] Step 14 — Dashboard: dish list, add/edit dish, photo upload, status indicator
+### Phase C — QR + Dashboard
+- [ ] 11. QR code generation endpoint + R2 storage
+- [ ] 12. `apps/dashboard` scaffold — React + Vite + Clerk auth
+- [ ] 13. Dashboard: dish list, add dish, photo upload UI, model status live indicator
+- [ ] 14. Connect AR frontend to real API (currently hardcoded to mock data)
 
 ---
 
-## Key Challenges to Watch
+## Key Challenges
 
-1. **HuggingFace rate limits** — Free tier allows ~50-100 req/hour. Batch overnight. Add retry logic with exponential backoff.
-2. **GLB size** — AI models output 5-20MB raw. Always Draco-compress to under 2MB with `gltf-pipeline -i in.glb -o out.glb --draco.compressionLevel 7`.
-3. **Python sidecar for HuggingFace** — Node.js doesn't have a gradio_client. Options: (a) spawn Python child process, (b) tiny FastAPI sidecar on Railway, (c) call the Space's REST API directly via fetch (Gradio exposes HTTP endpoints).
-4. **iOS AR** — model-viewer handles it. iOS 15+ supports GLB in AR Quick Look natively. No USDZ conversion needed.
-5. **R2 CORS** — Must configure R2 bucket CORS to allow requests from the web app domain before models will load.
-6. **rembg vs remove.bg** — If remove.bg credits run low during testing, switch to `rembg` via Python subprocess. Same interface, zero cost.
+1. **Tripo3D free credit limit** — Monitor usage. When credits hit 0, auto-fallback to Hunyuan3D.
+   Design the model generation service with a provider interface so switching is one config change.
+
+2. **GLB size** — Both Tripo and Hunyuan output 5-20MB raw. Always compress before R2.
+   `npx gltf-pipeline -i raw.glb -o out.glb --draco.compressionLevel 7`
+
+3. **Hunyuan3D via Node.js** — No npm gradio client. Call the Space's Gradio HTTP API directly
+   via `fetch`. It's just REST + SSE polling — no Python sidecar needed.
+
+4. **R2 CORS** — Without CORS config, browsers will block GLB fetches from the AR page.
+   Set this before any end-to-end testing.
+
+5. **remove.bg vs rembg quality** — For Indian food (curries, rice) with complex backgrounds,
+   remove.bg is noticeably better. Exhaust free credits on important dishes first.
+
+6. **Model orientation** — AI-generated models sometimes come out upside-down or sideways.
+   Add a simple rotation correction step (Three.js) in the AR viewer when loading.
 
 ---
 
-## Free vs Paid Cost Summary
+## Cost Summary
 
-| Phase | Model Source | Cost |
-|-------|-------------|------|
-| MVP Testing (200 dishes) | Poly Pizza library + HuggingFace AI | $0 |
-| Background removal (200 dishes) | Remove.bg free 50/mo × a few months | $0 |
-| Production launch | Meshy AI API at $0.20/model | ~$40 for 200 models |
-| At scale (1000 dishes/mo) | Meshy API on Pro plan | $20/mo flat |
-
-**The free approach is sufficient to test with 200 real dish photos before spending a dollar.**
+| Item | Free Phase (200 dishes) | Paid Phase |
+|------|------------------------|------------|
+| 3D generation | Tripo3D free + HuggingFace | ~$0.20/model (Tripo paid) |
+| Background removal | remove.bg 50/mo free | $9/mo for unlimited |
+| Storage + CDN | Cloudflare R2 free 10GB | $0.015/GB after |
+| Database | Neon free tier | $19/mo (Neon Pro) |
+| **Total for 200 dishes** | **$0** | — |
