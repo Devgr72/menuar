@@ -15,22 +15,30 @@ app.get('/', (_req, res) => {
   res.json({ status: 'ok', service: 'MenuAR API' });
 });
 
-// Routes — only mount if DB is available
 async function mountRoutes() {
+  if (!process.env.DATABASE_URL) {
+    console.warn('DATABASE_URL not set — skipping DB routes');
+    return;
+  }
+
   try {
     const { default: menuRoutes } = await import('./routes/menu.routes');
+    const { default: dishRoutes } = await import('./routes/dish.routes');
+
     app.use('/api/v1/menu', menuRoutes);
-    console.log('Routes mounted: /api/v1/menu');
+    app.use('/api/v1/dish', dishRoutes);
+
+    console.log('Routes mounted:');
+    console.log('  GET /api/v1/menu/:restaurantSlug');
+    console.log('  GET /api/v1/dish/:dishId');
+    console.log('  GET /api/v1/dish/:dishId/model-status');
   } catch (err) {
-    console.warn('Could not mount routes (database may not be configured):', err);
+    console.error('Failed to mount routes:', err);
   }
 }
 
 mountRoutes().then(() => {
   app.listen(PORT, () => {
     console.log(`MenuAR API running on port ${PORT}`);
-    if (!process.env.DATABASE_URL) {
-      console.warn('DATABASE_URL not set — database routes unavailable');
-    }
   });
 });

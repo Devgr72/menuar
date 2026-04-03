@@ -8,6 +8,17 @@ export interface Restaurant {
   createdAt: string;
 }
 
+export type ModelStatus =
+  | 'pending'
+  | 'bg_removing'
+  | 'bg_done'
+  | 'generating_3d'
+  | 'compressing'
+  | 'ready'
+  | 'failed';
+
+export type ModelSource = 'procedural' | 'tripo' | 'hunyuan';
+
 export interface Dish {
   id: string;
   categoryId: string;
@@ -15,11 +26,13 @@ export interface Dish {
   description: string;
   price: number;
   isVeg: boolean;
-  spiceLevel: number; // 0 = none, 1 = mild, 2 = medium, 3 = hot
+  spiceLevel: number; // 0=none 1=mild 2=medium 3=hot
   allergens: string[];
   isAvailable: boolean;
   modelUrl?: string;
   thumbnailUrl?: string;
+  modelStatus: ModelStatus;
+  modelSource: ModelSource;
   aiDescription?: string;
   translations?: Record<string, { name: string; description: string }>;
 }
@@ -48,6 +61,14 @@ export interface Table {
   qrUrl: string;
 }
 
+export interface DishPhoto {
+  id: string;
+  dishId: string;
+  originalKey: string;
+  cleanedKey?: string;
+  createdAt: string;
+}
+
 // ─── API response wrappers ────────────────────────────────────────────────────
 
 export type ApiSuccess<T> = { data: T };
@@ -60,6 +81,9 @@ export interface MenuResponse {
   menu: Menu;
 }
 
-// ─── Legacy (keep for backwards compat) ──────────────────────────────────────
-
-export interface HelloMenuAR { message: string; }
+export interface ModelStatusResponse {
+  dishId: string;
+  modelStatus: ModelStatus;
+  modelSource: ModelSource;
+  modelUrl?: string;
+}

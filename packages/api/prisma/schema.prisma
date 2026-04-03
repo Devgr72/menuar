@@ -7,11 +7,37 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Plan {
+  free
+  starter
+  pro
+}
+
+enum ModelStatus {
+  pending
+  bg_removing
+  bg_done
+  generating_3d
+  compressing
+  ready
+  failed
+}
+
+enum ModelSource {
+  procedural
+  tripo
+  hunyuan
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
 model Restaurant {
   id         String   @id @default(uuid())
   name       String
   slug       String   @unique
-  plan       String   @default("free")
+  plan       Plan     @default(free)
   clerkOrgId String?
   createdAt  DateTime @default(now())
 
@@ -20,14 +46,15 @@ model Restaurant {
 }
 
 model Table {
-  id           String     @id @default(uuid())
+  id           String @id @default(uuid())
   restaurantId String
   tableNumber  Int
-  qrCode       String     @unique
+  qrCode       String @unique
   qrUrl        String
 
   restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   views      DishView[]
+  qrCodes    QrCode[]
 
   @@unique([restaurantId, tableNumber])
 }
@@ -54,23 +81,36 @@ model Category {
 }
 
 model Dish {
-  id           String   @id @default(uuid())
-  categoryId   String
-  name         String
-  description  String   @default("")
-  price        Float
-  isVeg        Boolean  @default(false)
-  spiceLevel   Int      @default(0)
-  allergens    String[]
-  isAvailable  Boolean  @default(true)
-  modelUrl     String?
-  thumbnailUrl String?
+  id            String      @id @default(uuid())
+  categoryId    String
+  name          String
+  description   String      @default("")
+  price         Float
+  isVeg         Boolean     @default(false)
+  spiceLevel    Int         @default(0) // 0=none 1=mild 2=medium 3=hot
+  allergens     String[]
+  isAvailable   Boolean     @default(true)
+  modelUrl      String?     // R2 CDN URL — set when modelStatus = ready
+  thumbnailUrl  String?     // R2 CDN URL of cleaned dish photo
+  modelStatus   ModelStatus @default(pending)
+  modelSource   ModelSource @default(procedural)
   aiDescription String?
-  translations Json     @default("{}")
-  createdAt    DateTime @default(now())
+  translations  Json        @default("{}")
+  createdAt     DateTime    @default(now())
 
-  category Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  category Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   views    DishView[]
+  photos   DishPhoto[]
+}
+
+model DishPhoto {
+  id          String   @id @default(uuid())
+  dishId      String
+  originalKey String   // R2 object key — original upload
+  cleanedKey  String?  // R2 object key — after bg removal
+  createdAt   DateTime @default(now())
+
+  dish Dish @relation(fields: [dishId], references: [id], onDelete: Cascade)
 }
 
 model DishView {
@@ -80,5 +120,16 @@ model DishView {
   viewedAt DateTime @default(now())
 
   dish  Dish  @relation(fields: [dishId], references: [id], onDelete: Cascade)
+  table Table @relation(fields: [tableId], references: [id], onDelete: Cascade)
+}
+
+model QrCode {
+  id        String   @id @default(uuid())
+  tableId   String
+  imageKey  String   // R2 object key
+  imageUrl  String   // R2 CDN public URL
+  scanCount Int      @default(0)
+  createdAt DateTime @default(now())
+
   table Table @relation(fields: [tableId], references: [id], onDelete: Cascade)
 }
