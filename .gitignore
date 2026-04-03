@@ -6,7 +6,7 @@ dist/
 *.mind
 .turbo/
 .vercel/
-prisma/migrations/
+# prisma/migrations/ — intentionally tracked (needed for DB setup)
 *.log
 .DS_Store
 
