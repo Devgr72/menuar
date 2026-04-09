@@ -31,18 +31,108 @@ enum ModelSource {
   hunyuan
 }
 
+enum SubscriptionStatus {
+  pending
+  active
+  halted
+  cancelled
+  expired
+}
+
+enum PaymentEventType {
+  subscription_activated
+  subscription_charged
+  subscription_halted
+  subscription_cancelled
+  subscription_completed
+  payment_failed
+}
+
+enum SlotStatus {
+  empty
+  photos_uploaded
+  processing
+  glb_ready
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model Restaurant {
-  id         String   @id @default(uuid())
-  name       String
-  slug       String   @unique
-  plan       Plan     @default(free)
-  clerkOrgId String?
-  createdAt  DateTime @default(now())
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  plan      Plan     @default(free)
+  qrKey     String?  // R2 key for restaurant-level QR code image
+  qrUrl     String?  // CDN URL for restaurant-level QR code
+  scanCount Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  tables Table[]
-  menus  Menu[]
+  owner        RestaurantOwner?
+  subscription Subscription?
+  slots        DishSlot[]
+  tables       Table[]
+  menus        Menu[]
+}
+
+model RestaurantOwner {
+  id           String   @id @default(uuid())
+  clerkUserId  String   @unique
+  ownerName    String
+  email        String?  // stored from Clerk for admin display
+  restaurantId String   @unique
+  createdAt    DateTime @default(now())
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id              String             @id @default(uuid())
+  restaurantId    String             @unique
+  razorpaySubId   String             @unique
+  razorpayPlanId  String
+  status          SubscriptionStatus @default(pending)
+  amount          Int                // in paise (50000 = ₹500)
+  activatedAt     DateTime?
+  nextBillingAt   DateTime?
+  cancelledAt     DateTime?
+  haltedAt        DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  restaurant Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  events     PaymentEvent[]
+}
+
+model PaymentEvent {
+  id              String           @id @default(uuid())
+  subscriptionId  String
+  eventType       PaymentEventType
+  razorpayEventId String           @unique
+  payload         Json
+  createdAt       DateTime         @default(now())
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+}
+
+model DishSlot {
+  id           String     @id @default(uuid())
+  restaurantId String
+  slotNumber   Int        // 1-10
+  dishName     String?    // set after admin processes
+  description  String?
+  price        Float?
+  isVeg        Boolean    @default(true)
+  status       SlotStatus @default(empty)
+  photoKeys    String[]   // R2 keys of uploaded photos (max 4)
+  glbKey       String?    // R2 key of final GLB
+  glbUrl       String?    // CDN URL
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([restaurantId, slotNumber])
 }
 
 model Table {

@@ -5,6 +5,8 @@ export interface Restaurant {
   name: string;
   slug: string;
   plan: string;
+  qrUrl?: string;
+  scanCount: number;
   createdAt: string;
 }
 
@@ -18,6 +20,53 @@ export type ModelStatus =
   | 'failed';
 
 export type ModelSource = 'procedural' | 'tripo' | 'hunyuan';
+
+export type SubscriptionStatus =
+  | 'pending'
+  | 'active'
+  | 'halted'
+  | 'cancelled'
+  | 'expired';
+
+export type SlotStatus = 'empty' | 'photos_uploaded' | 'processing' | 'glb_ready';
+
+export interface RestaurantOwner {
+  id: string;
+  clerkUserId: string;
+  ownerName: string;
+  email?: string;
+  restaurantId: string;
+  createdAt: string;
+}
+
+export interface Subscription {
+  id: string;
+  restaurantId: string;
+  razorpaySubId: string;
+  status: SubscriptionStatus;
+  amount: number; // paise
+  activatedAt?: string;
+  nextBillingAt?: string;
+  cancelledAt?: string;
+  haltedAt?: string;
+  createdAt: string;
+}
+
+export interface DishSlot {
+  id: string;
+  restaurantId: string;
+  slotNumber: number; // 1-10
+  dishName?: string;
+  description?: string;
+  price?: number;
+  isVeg: boolean;
+  status: SlotStatus;
+  photoKeys: string[];
+  glbKey?: string;
+  glbUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface Dish {
   id: string;
@@ -86,4 +135,26 @@ export interface ModelStatusResponse {
   modelStatus: ModelStatus;
   modelSource: ModelSource;
   modelUrl?: string;
+}
+
+export interface DashboardResponse {
+  owner: RestaurantOwner;
+  restaurant: Restaurant;
+  subscription: Subscription | null;
+  slots: DishSlot[];
+}
+
+export interface AdminStats {
+  totalRegistered: number;
+  totalPaid: number;
+  leads: number;
+  totalQrScans: number;
+}
+
+export interface AdminRestaurant {
+  restaurant: Restaurant;
+  owner: RestaurantOwner;
+  subscription: Subscription | null;
+  slotsReady: number;
+  slotsWithPhotos: number;
 }

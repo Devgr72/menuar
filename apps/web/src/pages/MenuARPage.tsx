@@ -10,7 +10,7 @@ import { getPizzaModelUrl } from '../ar/pizzaModel';
 
 const DISH_EMOJIS: Record<string, string> = {
   margherita: '🍕', pepperoni: '🍕', bbq: '🍕', truffle: '🍕', fungi: '🍕',
-  pasta: '🍝', carbonara: '🍝',
+  pasta: '🍝', carbonara: '🍝', ramen: '🍜', bunshin: '🍜',
   tiramisu: '🍮', panna: '🍮',
 };
 
@@ -45,11 +45,20 @@ export default function MenuARPage() {
 
   const currentDish = activeDish ?? dishes[0] ?? null;
 
-  // ── Generate pizza GLB whenever selected dish changes ──────────────────────
+  // ── Resolve model URL whenever selected dish changes ──────────────────────
   useEffect(() => {
     if (!currentDish || currentDish.id === prevDishId.current) return;
     prevDishId.current = currentDish.id;
 
+    const ASTRONAUT = 'https://modelviewer.dev/shared-assets/models/Astronaut.glb';
+
+    // Use the dish's own model URL if it's a real GLB (not the old astronaut placeholder)
+    if (currentDish.modelUrl && currentDish.modelUrl !== ASTRONAUT) {
+      setModelUrl(currentDish.modelUrl);
+      return;
+    }
+
+    // Fallback: procedurally generate a pizza GLB
     setModelLoading(true);
     setModelUrl(null);
 
@@ -59,8 +68,7 @@ export default function MenuARPage() {
         setModelLoading(false);
       })
       .catch(() => {
-        // Fallback: use Google's astronaut until real models exist
-        setModelUrl('https://modelviewer.dev/shared-assets/models/Astronaut.glb');
+        setModelUrl(ASTRONAUT);
         setModelLoading(false);
       });
   }, [currentDish?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -156,8 +164,10 @@ export default function MenuARPage() {
         alt={`3D model of ${currentDish.name}`}
         ar
         ar-modes="webxr scene-viewer quick-look"
-        ar-scale="fixed"
+        ar-scale="auto"
         ar-placement="floor"
+        scale="0.4 0.4 0.4"
+        camera-orbit="0deg 70deg auto"
         camera-controls
         auto-rotate
         auto-rotate-delay={1500}
