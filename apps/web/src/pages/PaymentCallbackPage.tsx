@@ -111,21 +111,25 @@ export default function PaymentCallbackPage() {
         {state === 'loading' && (
           <>
             <div className="w-16 h-16 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mx-auto mb-6" />
-            <h1 className="text-xl font-semibold text-white">Confirming your payment</h1>
-            <p className="text-gray-400 text-sm mt-2">This usually takes a few seconds...</p>
+            <h1 className="text-xl font-semibold text-white">Waiting for payment</h1>
+            <p className="text-gray-400 text-sm mt-2">
+              Complete your payment in the other tab.<br />
+              This page will update automatically.
+            </p>
 
-            {/* Dev-only manual activation */}
+            {/* Dev-only manual activation — shown after 5s */}
             {IS_DEV && showDevButton && (
               <div className="mt-8 border border-dashed border-gray-700 rounded-xl p-4">
-                <p className="text-gray-500 text-xs mb-3">
-                  Running locally? Webhook not configured — activate manually:
+                <p className="text-gray-500 text-xs mb-1 font-medium">Local dev mode</p>
+                <p className="text-gray-600 text-xs mb-3">
+                  After completing payment in the other tab, click below to activate:
                 </p>
                 <button
                   onClick={handleDevActivate}
                   disabled={activating}
                   className="w-full bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-orange-400 text-sm font-medium rounded-lg py-2.5 transition-colors border border-gray-700"
                 >
-                  {activating ? 'Activating...' : '⚡ Activate subscription (dev only)'}
+                  {activating ? 'Activating...' : '⚡ I completed payment — activate now'}
                 </button>
               </div>
             )}

@@ -25,7 +25,9 @@ export default function PlanSelectionPage() {
       const token = await getToken()
       if (!token) throw new Error('Not authenticated')
       const { checkoutUrl } = await createSubscription(token)
-      window.location.href = checkoutUrl
+      // Open Razorpay in a new tab — current tab navigates to callback page to poll status
+      window.open(checkoutUrl, '_blank', 'noopener')
+      navigate('/payment-callback')
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Something went wrong'
       if (msg.includes('ALREADY_SUBSCRIBED')) {
