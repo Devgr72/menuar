@@ -125,7 +125,9 @@ model DishSlot {
   price        Float?
   isVeg        Boolean    @default(true)
   status       SlotStatus @default(empty)
-  photoKeys    String[]   // R2 keys of uploaded photos (max 4)
+  menuPhotoKey String?    // R2 key of the single menu/card thumbnail photo
+  menuPhotoUrl String?    // CDN URL of menu thumbnail (shown on menu card)
+  photoKeys    String[]   // R2 keys of 3D-angle photos (up to 4, for model gen)
   glbKey       String?    // R2 key of final GLB
   glbUrl       String?    // CDN URL
   createdAt    DateTime   @default(now())

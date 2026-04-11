@@ -5,8 +5,13 @@ import { requireClerkAuth } from '../middleware/clerkAuth';
 import {
   ensureMonthlyPlan,
   createRazorpaySubscription,
+  getClient,
   AMOUNT_PAISE,
 } from '../services/razorpay.service';
+import QRCode from 'qrcode';
+import { saveFile } from '../services/storage.service';
+
+const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -155,7 +160,62 @@ router.get('/status', requireClerkAuth, async (req, res) => {
     return;
   }
 
-  const sub = owner.restaurant.subscription;
+  let sub = owner.restaurant.subscription;
+
+  // Fallback sync for local development where Razorpay webhooks cannot reach localhost
+  if (sub.status === 'pending') {
+    try {
+      const client = getClient();
+      const rzpSub = await client.subscriptions.fetch(sub.razorpaySubId);
+      
+      if (rzpSub.status === 'active' || rzpSub.status === 'authenticated') {
+        log('Razorpay says active/authenticated — fast-forwarding subscription state (webhook fallback)');
+        // @ts-ignore
+        const chargeAt = rzpSub.charge_at as number | undefined;
+        
+        await prisma.$transaction(async (tx) => {
+          sub = await tx.subscription.update({
+            where: { id: sub.id },
+            data: {
+              status: 'active',
+              activatedAt: new Date(),
+              nextBillingAt: chargeAt ? new Date(chargeAt * 1000) : undefined,
+              haltedAt: null,
+            },
+          });
+        });
+
+        // Generate QR code if missing
+        if (!owner.restaurant.qrUrl) {
+          const qrBuffer = await QRCode.toBuffer(`${BASE_URL}/ar/${owner.restaurant.slug}`, {
+            errorCorrectionLevel: 'H',
+            width: 400,
+            margin: 2,
+            color: { dark: '#000000', light: '#FFFFFF' },
+          });
+          const { url } = await saveFile(`qr/${owner.restaurant.id}`, 'main.png', qrBuffer);
+          await prisma.restaurant.update({
+            where: { id: owner.restaurant.id },
+            data: { qrKey: `qr/${owner.restaurant.id}/main.png`, qrUrl: url },
+          });
+        }
+
+        // Create default menu if lacking
+        const existingMenu = await prisma.menu.findFirst({ where: { restaurantId: owner.restaurant.id } });
+        if (!existingMenu) {
+          const menu = await prisma.menu.create({
+            data: { restaurantId: owner.restaurant.id, name: 'Menu', isActive: true },
+          });
+          await prisma.category.create({
+            data: { menuId: menu.id, name: 'Dishes', sortOrder: 0 },
+          });
+        }
+      }
+    } catch (err) {
+      logError('Failed to sync pending subscription with Razorpay:', err);
+    }
+  }
+
   log('Status: returning subscription', { status: sub.status, id: sub.id });
   res.json({
     subscription: {

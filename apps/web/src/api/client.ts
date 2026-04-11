@@ -132,13 +132,28 @@ export async function getDashboard(token: string): Promise<DashboardResponse> {
   return apiFetch('/api/v1/restaurant/dashboard', { token })
 }
 
+export async function updateProfile(
+  token: string,
+  data: { ownerName?: string; restaurantName?: string },
+): Promise<{ ok: boolean }> {
+  return apiFetch('/api/v1/restaurant/profile', {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify(data),
+  })
+}
+
 export async function uploadSlotPhotos(
   token: string,
   slotNumber: number,
-  files: File[],
-): Promise<{ slotNumber: number; photoKeys: string[]; status: string }> {
+  anglePhotos: File[],
+  meta?: { dishName?: string; description?: string; menuPhoto?: File },
+): Promise<{ slotNumber: number; menuPhotoUrl?: string; photoKeys: string[]; status: string }> {
   const formData = new FormData()
-  files.forEach((f) => formData.append('photos', f))
+  anglePhotos.forEach((f) => formData.append('photos', f))
+  if (meta?.menuPhoto) formData.append('menuPhoto', meta.menuPhoto)
+  if (meta?.dishName) formData.append('dishName', meta.dishName)
+  if (meta?.description) formData.append('description', meta.description)
 
   const res = await fetch(`${API_URL}/api/v1/restaurant/slots/${slotNumber}/photos`, {
     method: 'POST',

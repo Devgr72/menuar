@@ -61,7 +61,9 @@ export interface DishSlot {
   price?: number;
   isVeg: boolean;
   status: SlotStatus;
-  photoKeys: string[];
+  menuPhotoKey?: string;  // R2 key of single menu/card thumbnail photo
+  menuPhotoUrl?: string;  // CDN URL of menu thumbnail (shown on menu card)
+  photoKeys: string[];    // R2 keys of 3D-angle photos (up to 4)
   glbKey?: string;
   glbUrl?: string;
   createdAt: string;

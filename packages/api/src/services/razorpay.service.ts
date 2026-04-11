@@ -7,7 +7,7 @@ const MONTHLY_TOTAL_COUNT = 120; // 10 years max — effectively unlimited
 let razorpayClient: Razorpay | null = null;
 let cachedPlanId: string | null = process.env.RAZORPAY_PLAN_ID || null;
 
-function getClient(): Razorpay {
+export function getClient(): Razorpay {
   if (!razorpayClient) {
     const keyId = process.env.RAZORPAY_KEY_ID;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
