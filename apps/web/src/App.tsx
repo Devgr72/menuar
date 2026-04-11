@@ -5,9 +5,7 @@ import OnboardingPage from './pages/OnboardingPage'
 import PlanSelectionPage from './pages/PlanSelectionPage'
 import PaymentCallbackPage from './pages/PaymentCallbackPage'
 import RestaurantDashboardPage from './pages/RestaurantDashboardPage'
-import AdminPage from './pages/AdminPage'
 import ProtectedRoute from './components/auth/ProtectedRoute'
-import AdminRoute from './components/auth/AdminRoute'
 
 function RootRedirect() {
   const { isSignedIn, isLoaded } = useAuth()
@@ -99,16 +97,6 @@ export default function App() {
             <ProtectedRoute>
               <RestaurantDashboardPage />
             </ProtectedRoute>
-          }
-        />
-
-        {/* Admin panel */}
-        <Route
-          path="/admin"
-          element={
-            <AdminRoute>
-              <AdminPage />
-            </AdminRoute>
           }
         />
 

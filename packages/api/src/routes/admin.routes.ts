@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import { requireAdminAuth } from '../middleware/clerkAuth';
 import { saveFile, deleteFile } from '../services/storage.service';
 import { z } from 'zod';
+import jwt from 'jsonwebtoken';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -22,6 +23,31 @@ const glbUpload = multer({
       cb(null, true);
     }
   },
+});
+
+/** POST /api/v1/admin/login */
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body || {};
+  
+  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+    
+  // Check if email matches whitelist and password matches env
+  if (!email || !password || !ADMIN_EMAILS.includes(email.toLowerCase()) || password !== process.env.ADMIN_PASSWORD) {
+    res.status(401).json({ error: 'Invalid admin credentials', code: 'UNAUTHORIZED' });
+    return;
+  }
+
+  // Generate JWT token
+  const token = jwt.sign(
+    { email: email.toLowerCase(), role: 'admin' }, 
+    process.env.JWT_SECRET || 'fallback-secret', 
+    { expiresIn: '7d' }
+  );
+
+  res.json({ token });
 });
 
 /** GET /api/v1/admin/stats */
@@ -137,6 +163,7 @@ router.post('/slots/:slotId/glb', requireAdminAuth, glbUpload.single('glb'), asy
       status: 'glb_ready',
       ...(body.dishName && { dishName: body.dishName }),
       ...(body.description && { description: body.description }),
+      ...(body.ingredients && { ingredients: body.ingredients }),
       ...(body.price && { price: parseFloat(body.price) }),
       ...(body.isVeg !== undefined && { isVeg: body.isVeg === 'true' }),
     },
@@ -148,6 +175,7 @@ router.post('/slots/:slotId/glb', requireAdminAuth, glbUpload.single('glb'), asy
 const SlotUpdateSchema = z.object({
   dishName: z.string().min(1).max(100).optional(),
   description: z.string().max(500).optional(),
+  ingredients: z.string().max(1000).optional(),
   price: z.number().positive().optional(),
   isVeg: z.boolean().optional(),
 });
@@ -174,19 +202,54 @@ router.put('/slots/:slotId', requireAdminAuth, async (req, res) => {
   res.json({ slot: updated });
 });
 
-/** GET /api/v1/admin/events — last 20 payment events for activity feed */
-router.get('/events', requireAdminAuth, async (_req, res) => {
-  const events = await prisma.paymentEvent.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: 20,
-    include: {
-      subscription: {
-        include: { restaurant: { select: { name: true, slug: true } } },
-      },
-    },
-  });
+/** GET /api/v1/admin/events — all payment events */
+router.get('/events', requireAdminAuth, async (req, res) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+  const skip = (page - 1) * limit;
 
-  res.json({ events });
+  const [total, events] = await Promise.all([
+    prisma.paymentEvent.count(),
+    prisma.paymentEvent.findMany({
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+      include: {
+        subscription: {
+          include: {
+            restaurant: {
+              select: { name: true, slug: true },
+            },
+          },
+        },
+      },
+    }),
+  ]);
+
+  // Attach owner email per event via restaurant
+  const restaurantIds = [...new Set(events.map(e => e.subscription.restaurantId))];
+  const owners = await prisma.restaurantOwner.findMany({
+    where: { restaurantId: { in: restaurantIds } },
+    select: { restaurantId: true, ownerName: true, email: true },
+  });
+  const ownerMap = Object.fromEntries(owners.map(o => [o.restaurantId, o]));
+
+  const enriched = events.map(e => ({
+    id: e.id,
+    eventType: e.eventType,
+    createdAt: e.createdAt,
+    razorpayEventId: e.razorpayEventId,
+    subscription: {
+      id: e.subscription.id,
+      status: e.subscription.status,
+      amount: e.subscription.amount,
+      planType: e.subscription.razorpayPlanId,
+      restaurant: e.subscription.restaurant,
+      owner: ownerMap[e.subscription.restaurantId] || null,
+    },
+  }));
+
+  res.json({ events: enriched, total, page, limit });
 });
 
 export default router;

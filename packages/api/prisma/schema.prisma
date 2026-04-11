@@ -121,6 +121,7 @@ model DishSlot {
   slotNumber   Int        // 1-10
   dishName     String?    // set after admin processes
   description  String?
+  ingredients  String?
   price        Float?
   isVeg        Boolean    @default(true)
   status       SlotStatus @default(empty)
