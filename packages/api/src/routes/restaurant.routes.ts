@@ -28,52 +28,57 @@ router.get('/dashboard', requireClerkAuth, async (req, res) => {
     return;
   }
 
-  const owner = await prisma.restaurantOwner.findUnique({
-    where: { clerkUserId: userId },
-    include: {
-      restaurant: {
-        include: {
-          subscription: true,
-          slots: { orderBy: { slotNumber: 'asc' } },
+  try {
+    const owner = await prisma.restaurantOwner.findUnique({
+      where: { clerkUserId: userId },
+      include: {
+        restaurant: {
+          include: {
+            subscription: true,
+            slots: { orderBy: { slotNumber: 'asc' } },
+          },
         },
       },
-    },
-  });
+    });
 
-  if (!owner) {
-    res.status(404).json({ error: 'Not registered', code: 'NOT_REGISTERED' });
-    return;
+    if (!owner) {
+      res.status(404).json({ error: 'Not registered', code: 'NOT_REGISTERED' });
+      return;
+    }
+
+    res.json({
+      owner: {
+        id: owner.id,
+        ownerName: owner.ownerName,
+        email: owner.email,
+        restaurantId: owner.restaurantId,
+        createdAt: owner.createdAt,
+      },
+      restaurant: {
+        id: owner.restaurant.id,
+        name: owner.restaurant.name,
+        slug: owner.restaurant.slug,
+        plan: owner.restaurant.plan,
+        qrUrl: owner.restaurant.qrUrl,
+        scanCount: owner.restaurant.scanCount,
+        createdAt: owner.restaurant.createdAt,
+      },
+      subscription: owner.restaurant.subscription
+        ? {
+            id: owner.restaurant.subscription.id,
+            status: owner.restaurant.subscription.status,
+            amount: owner.restaurant.subscription.amount,
+            activatedAt: owner.restaurant.subscription.activatedAt,
+            nextBillingAt: owner.restaurant.subscription.nextBillingAt,
+            haltedAt: owner.restaurant.subscription.haltedAt,
+          }
+        : null,
+      slots: owner.restaurant.slots,
+    });
+  } catch (err) {
+    console.error('[Dashboard Error]', err);
+    res.status(500).json({ error: 'Failed to load dashboard', code: 'DASHBOARD_ERROR', details: String(err) });
   }
-
-  res.json({
-    owner: {
-      id: owner.id,
-      ownerName: owner.ownerName,
-      email: owner.email,
-      restaurantId: owner.restaurantId,
-      createdAt: owner.createdAt,
-    },
-    restaurant: {
-      id: owner.restaurant.id,
-      name: owner.restaurant.name,
-      slug: owner.restaurant.slug,
-      plan: owner.restaurant.plan,
-      qrUrl: owner.restaurant.qrUrl,
-      scanCount: owner.restaurant.scanCount,
-      createdAt: owner.restaurant.createdAt,
-    },
-    subscription: owner.restaurant.subscription
-      ? {
-          id: owner.restaurant.subscription.id,
-          status: owner.restaurant.subscription.status,
-          amount: owner.restaurant.subscription.amount,
-          activatedAt: owner.restaurant.subscription.activatedAt,
-          nextBillingAt: owner.restaurant.subscription.nextBillingAt,
-          haltedAt: owner.restaurant.subscription.haltedAt,
-        }
-      : null,
-    slots: owner.restaurant.slots,
-  });
 });
 
 /** GET /api/v1/restaurant/slots */

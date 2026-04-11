@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { SignIn, SignUp, useAuth } from '@clerk/react'
+import { useAuth, AuthenticateWithRedirectCallback } from '@clerk/react'
 import MenuARPage from './pages/MenuARPage'
+import AuthPage from './pages/AuthPage'
 import OnboardingPage from './pages/OnboardingPage'
 import PlanSelectionPage from './pages/PlanSelectionPage'
 import PaymentCallbackPage from './pages/PaymentCallbackPage'
@@ -13,17 +14,6 @@ function RootRedirect() {
   return <Navigate to={isSignedIn ? '/dashboard' : '/sign-up'} replace />
 }
 
-const CLERK_APPEARANCE = {
-  variables: {
-    colorPrimary: '#ea580c',
-    colorBackground: '#111827',
-    colorText: '#ffffff',
-    colorTextSecondary: '#9ca3af',
-    colorInputBackground: '#1f2937',
-    colorInputText: '#ffffff',
-  },
-}
-
 export default function App() {
   return (
     <BrowserRouter>
@@ -32,32 +22,24 @@ export default function App() {
         <Route path="/ar/:restaurantSlug" element={<MenuARPage />} />
         <Route path="/ar" element={<MenuARPage />} />
 
-        {/* Clerk auth pages — centered dark layout */}
+        {/* Auth pages — wildcard catches all Clerk sub-routes:
+            /sign-up/verify-email-address, /sign-up/continue
+            /sign-in/factor-one, /sign-in/factor-two, etc. */}
+        <Route path="/sign-up" element={<AuthPage mode="sign-up" />} />
+        <Route path="/sign-up/*" element={<AuthPage mode="sign-up" />} />
+        <Route path="/sign-in" element={<AuthPage mode="sign-in" />} />
+        <Route path="/sign-in/*" element={<AuthPage mode="sign-in" />} />
+
+        {/* SSO / OAuth callback — Clerk redirects here after Google sign-in */}
         <Route
-          path="/sign-up"
+          path="/sso-callback"
           element={
-            <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
-              <SignUp
-                routing="path"
-                path="/sign-up"
-                signInUrl="/sign-in"
-                fallbackRedirectUrl="/onboarding"
-                appearance={CLERK_APPEARANCE}
-              />
-            </div>
-          }
-        />
-        <Route
-          path="/sign-in"
-          element={
-            <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
-              <SignIn
-                routing="path"
-                path="/sign-in"
-                signUpUrl="/sign-up"
-                fallbackRedirectUrl="/dashboard"
-                appearance={CLERK_APPEARANCE}
-              />
+            <div className="min-h-screen flex items-center justify-center bg-slate-50 font-poppins">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-10 h-10 border-4 border-[#2563eb] border-t-transparent rounded-full animate-spin" />
+                <p className="text-slate-500 text-sm font-medium">Completing sign-in…</p>
+              </div>
+              <AuthenticateWithRedirectCallback />
             </div>
           }
         />
