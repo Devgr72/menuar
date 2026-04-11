@@ -29,10 +29,10 @@ export async function ensureMonthlyPlan(): Promise<string> {
     period: 'monthly',
     interval: 1,
     item: {
-      name: 'MenuAR Starter Plan',
+      name: 'DishDekho Starter Plan',
       amount: AMOUNT_PAISE,
       currency: 'INR',
-      description: 'MenuAR — 10 AR dishes, QR code, dashboard',
+      description: 'DishDekho — 10 AR dishes, QR code, dashboard',
     },
   });
 

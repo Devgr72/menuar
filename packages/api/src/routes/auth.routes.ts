@@ -1,8 +1,16 @@
 import { Router } from 'express';
 import { getAuth } from '@clerk/express';
 import { z } from 'zod';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { requireClerkAuth } from '../middleware/clerkAuth';
+
+const IS_DEV = process.env.NODE_ENV !== 'production';
+function log(step: string, data?: unknown) {
+  if (IS_DEV) console.log(`\x1b[34m[auth]\x1b[0m ${step}`, data !== undefined ? data : '');
+}
+function logError(step: string, err: unknown) {
+  console.error(`\x1b[31m[auth]\x1b[0m ✗ ${step}`, err);
+}
 
 const router = Router();
 const prisma = new PrismaClient();
