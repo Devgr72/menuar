@@ -8,6 +8,17 @@ import type {
 // Empty string = use Vite proxy in dev (avoids CORS on HTTPS).
 // Set VITE_API_URL to deployed URL in production.
 const API_URL = import.meta.env.VITE_API_URL || ''
+const IS_DEV = import.meta.env.DEV
+
+function devLog(label: string, ...args: unknown[]) {
+  if (IS_DEV) console.log(`%c[API] ${label}`, 'color:#2563eb;font-weight:bold', ...args)
+}
+function devWarn(label: string, ...args: unknown[]) {
+  if (IS_DEV) console.warn(`%c[API] ${label}`, 'color:#f59e0b;font-weight:bold', ...args)
+}
+function devError(label: string, ...args: unknown[]) {
+  if (IS_DEV) console.error(`%c[API] ${label}`, 'color:#ef4444;font-weight:bold', ...args)
+}
 
 async function apiFetch<T>(
   path: string,
@@ -18,20 +29,57 @@ async function apiFetch<T>(
     ...(options?.token ? { Authorization: `Bearer ${options.token}` } : {}),
   }
 
-  const res = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: { ...headers, ...(options?.headers as Record<string, string>) },
-  })
+  const fullUrl = `${API_URL}${path}`
+  const method = options?.method ?? 'GET'
+  devLog(`→ ${method} ${fullUrl}`, { hasToken: !!options?.token })
+
+  let res: Response
+  try {
+    res = await fetch(fullUrl, {
+      ...options,
+      headers: { ...headers, ...(options?.headers as Record<string, string>) },
+    })
+  } catch (networkErr) {
+    devError(`Network failure ${method} ${fullUrl}`, networkErr)
+    throw new Error(`Network error — is the API server running on port 3001? (${(networkErr as Error).message})`)
+  }
+
+  devLog(`← ${res.status} ${res.statusText} ${fullUrl}`)
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: 'Unknown error', code: 'UNKNOWN' }))
-    throw Object.assign(new Error(body.error || 'Request failed'), {
+    // Read raw text first so we can log it even if it's not JSON
+    const rawText = await res.text().catch(() => '')
+    devWarn(`Error response body (${res.status}):`, rawText)
+
+    let body: { error?: string; code?: string } = {}
+    try {
+      body = JSON.parse(rawText)
+    } catch {
+      devError('Response was not JSON — possible HTML error page or proxy failure', {
+        status: res.status,
+        url: fullUrl,
+        preview: rawText.slice(0, 300),
+      })
+      // Give a meaningful message based on status
+      const statusMsg =
+        res.status === 401 ? 'Not authenticated — please sign in again' :
+        res.status === 403 ? 'Access denied' :
+        res.status === 404 ? 'API endpoint not found — check the API server' :
+        res.status === 502 || res.status === 503 ? 'API server is not reachable — is it running on port 3001?' :
+        `Server error (HTTP ${res.status})`
+      throw Object.assign(new Error(statusMsg), { code: 'HTTP_ERROR', status: res.status })
+    }
+
+    devError('API error:', { code: body.code, error: body.error, status: res.status })
+    throw Object.assign(new Error(body.error || `Request failed (${res.status})`), {
       code: body.code,
       status: res.status,
     })
   }
 
-  return res.json() as Promise<T>
+  const data = await res.json() as T
+  devLog(`✓ Response data for ${path}:`, data)
+  return data
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -57,7 +105,11 @@ export async function getMe(token: string) {
 
 // ─── Subscription ─────────────────────────────────────────────────────────────
 
-export async function createSubscription(token: string): Promise<{ checkoutUrl: string }> {
+export async function createSubscription(token: string): Promise<{
+  checkoutUrl: string
+  razorpaySubId: string
+  razorpayKeyId: string
+}> {
   return apiFetch('/api/v1/subscription/create', { method: 'POST', token })
 }
 
