@@ -7,9 +7,11 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        poppins: ['Poppins', 'sans-serif'],
-        nunito: ['Nunito', 'sans-serif'],
-        inter: ['Inter', 'sans-serif'],
+        poppins:   ['Poppins', 'sans-serif'],
+        nunito:    ['Nunito', 'sans-serif'],
+        inter:     ['Inter', 'sans-serif'],
+        fraunces:  ['Fraunces', 'Georgia', 'serif'],
+        'dm-sans': ['"DM Sans"', 'sans-serif'],
       },
       colors: {
         brand: {
@@ -20,6 +22,30 @@ export default {
           gold:    '#f59e0b',
           amber:   '#fbbf24',
           orange:  '#ea580c',
+        },
+        parchment: {
+          50:  '#FDFAF4',
+          100: '#F9F4E8',
+          200: '#F2EAD5',
+          300: '#E8DDBF',
+          400: '#D4C9A8',
+          500: '#B8A882',
+        },
+        forest: {
+          50:  '#F0F4F0',
+          100: '#D6E5D6',
+          200: '#A8C9A8',
+          300: '#6FA06F',
+          400: '#4A7A4A',
+          500: '#2B4A2B',
+          600: '#1E341E',
+          700: '#142314',
+        },
+        spice: {
+          gold:   '#C5922A',
+          amber:  '#E8A83A',
+          light:  '#F7D080',
+          saffron:'#E8640A',
         },
       },
       backgroundImage: {

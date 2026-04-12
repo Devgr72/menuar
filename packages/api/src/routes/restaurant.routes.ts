@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024, files: 4 }, // 10MB each, max 4
+  limits: { fileSize: 10 * 1024 * 1024, files: 5 }, // 10MB each, max 5 (1 menu photo + 4 angle photos)
   fileFilter: (_req, file, cb) => {
     if (!file.mimetype.startsWith('image/')) {
       cb(new Error('Only image files are allowed'));
@@ -81,6 +81,38 @@ router.get('/dashboard', requireClerkAuth, async (req, res) => {
   }
 });
 
+/** PATCH /api/v1/restaurant/profile — update owner name and/or restaurant name */
+router.patch('/profile', requireClerkAuth, async (req, res) => {
+  const { userId } = getAuth(req);
+  if (!userId) {
+    res.status(401).json({ error: 'Unauthorized', code: 'AUTH_REQUIRED' });
+    return;
+  }
+
+  const { ownerName, restaurantName } = req.body as { ownerName?: string; restaurantName?: string };
+  if (!ownerName?.trim() && !restaurantName?.trim()) {
+    res.status(400).json({ error: 'Nothing to update', code: 'NO_DATA' });
+    return;
+  }
+
+  const owner = await prisma.restaurantOwner.findUnique({ where: { clerkUserId: userId } });
+  if (!owner) {
+    res.status(404).json({ error: 'Not registered', code: 'NOT_REGISTERED' });
+    return;
+  }
+
+  await Promise.all([
+    ownerName?.trim()
+      ? prisma.restaurantOwner.update({ where: { id: owner.id }, data: { ownerName: ownerName.trim() } })
+      : Promise.resolve(),
+    restaurantName?.trim()
+      ? prisma.restaurant.update({ where: { id: owner.restaurantId }, data: { name: restaurantName.trim() } })
+      : Promise.resolve(),
+  ]);
+
+  res.json({ ok: true });
+});
+
 /** GET /api/v1/restaurant/slots */
 router.get('/slots', requireClerkAuth, async (req, res) => {
   const { userId } = getAuth(req);
@@ -103,11 +135,19 @@ router.get('/slots', requireClerkAuth, async (req, res) => {
   res.json({ slots });
 });
 
-/** POST /api/v1/restaurant/slots/:slotNumber/photos */
+/** POST /api/v1/restaurant/slots/:slotNumber/photos
+ *  Accepts fields:
+ *    menuPhoto  (single)    — card/thumbnail image shown on the AR menu
+ *    photos     (up to 4)   — multi-angle shots used to generate the 3D model
+ *    dishName, description  — text fields in the same multipart request
+ */
 router.post(
   '/slots/:slotNumber/photos',
   requireClerkAuth,
-  upload.array('photos', 4),
+  upload.fields([
+    { name: 'menuPhoto', maxCount: 1 },
+    { name: 'photos', maxCount: 4 },
+  ]),
   async (req, res) => {
     const { userId } = getAuth(req);
     if (!userId) {
@@ -121,8 +161,11 @@ router.post(
       return;
     }
 
-    const files = req.files as Express.Multer.File[] | undefined;
-    if (!files || files.length === 0) {
+    const fieldFiles = req.files as Record<string, Express.Multer.File[]> | undefined;
+    const menuPhotoFiles = fieldFiles?.menuPhoto ?? [];
+    const anglePhotoFiles = fieldFiles?.photos ?? [];
+
+    if (menuPhotoFiles.length === 0 && anglePhotoFiles.length === 0) {
       res.status(400).json({ error: 'No photos uploaded', code: 'NO_FILES' });
       return;
     }
@@ -151,27 +194,44 @@ router.post(
       return;
     }
 
-    // Upload photos to R2/local storage
+    const dir = `photos/${owner.restaurantId}/slot-${slotNumber}`;
+
+    // Save menu/thumbnail photo
+    let menuPhotoKey: string | undefined;
+    let menuPhotoUrl: string | undefined;
+    if (menuPhotoFiles.length > 0) {
+      const f = menuPhotoFiles[0];
+      const ext = f.originalname.split('.').pop() || 'jpg';
+      const { key, url } = await saveFile(dir, `menu.${ext}`, f.buffer);
+      menuPhotoKey = key;
+      menuPhotoUrl = url;
+    }
+
+    // Save 3D-angle photos
     const photoKeys: string[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const ext = file.originalname.split('.').pop() || 'jpg';
-      const filename = `photo-${i + 1}.${ext}`;
-      const { key } = await saveFile(
-        `photos/${owner.restaurantId}/slot-${slotNumber}`,
-        filename,
-        file.buffer,
-      );
+    for (let i = 0; i < anglePhotoFiles.length; i++) {
+      const f = anglePhotoFiles[i];
+      const ext = f.originalname.split('.').pop() || 'jpg';
+      const { key } = await saveFile(dir, `angle-${i + 1}.${ext}`, f.buffer);
       photoKeys.push(key);
     }
 
+    const { dishName, description } = req.body as { dishName?: string; description?: string };
+
     const updated = await prisma.dishSlot.update({
       where: { id: slot.id },
-      data: { photoKeys, status: 'photos_uploaded' },
+      data: {
+        ...(photoKeys.length > 0 ? { photoKeys } : {}),
+        ...(menuPhotoKey ? { menuPhotoKey, menuPhotoUrl } : {}),
+        status: 'photos_uploaded',
+        ...(dishName?.trim() ? { dishName: dishName.trim() } : {}),
+        ...(description?.trim() ? { description: description.trim() } : {}),
+      },
     });
 
     res.json({
       slotNumber: updated.slotNumber,
+      menuPhotoUrl: updated.menuPhotoUrl,
       photoKeys: updated.photoKeys,
       status: updated.status,
     });

@@ -3,6 +3,7 @@ export interface DishPill {
   name: string;
   emoji?: string;
   modelUrl: string;
+  thumbnailUrl?: string;
 }
 
 interface DishStripProps {
@@ -14,7 +15,6 @@ interface DishStripProps {
 export default function DishStrip({ dishes, activeDishId, onSelect }: DishStripProps) {
   return (
     <div className="absolute bottom-0 left-0 right-0 z-10 pb-8">
-      {/* Gradient fade so the strip feels embedded in the AR scene */}
       <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
 
       <div
@@ -28,14 +28,22 @@ export default function DishStrip({ dishes, activeDishId, onSelect }: DishStripP
               key={dish.id}
               onClick={() => onSelect(dish)}
               className={`
-                flex-none flex items-center gap-2 px-4 py-2.5 rounded-full
+                flex-none flex items-center gap-2 pl-1 pr-4 py-1 rounded-full
                 text-sm font-semibold transition-all duration-200
                 ${isActive
                   ? 'bg-white text-black shadow-lg scale-105'
                   : 'bg-black/60 text-white backdrop-blur-sm border border-white/20 active:scale-95'}
               `}
             >
-              {dish.emoji && <span className="text-base">{dish.emoji}</span>}
+              {dish.thumbnailUrl ? (
+                <img
+                  src={dish.thumbnailUrl}
+                  alt={dish.name}
+                  className="w-8 h-8 rounded-full object-cover flex-none border-2 border-white/20"
+                />
+              ) : (
+                <span className="text-base flex-none px-1">{dish.emoji ?? '🍽️'}</span>
+              )}
               {dish.name}
             </button>
           );
