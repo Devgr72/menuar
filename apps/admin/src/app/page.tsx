@@ -12,6 +12,8 @@ type Filter = 'all' | 'paid' | 'lead'
 interface DetailView {
   restaurantId: string
   restaurantName: string
+  restaurantSlug: string
+  qrUrl?: string
 }
 
 interface PaymentEvent {
@@ -60,8 +62,8 @@ function AdminPageInner() {
   const [txTotal, setTxTotal] = useState(0)
   const [txPage, setTxPage] = useState(1)
 
-  const { stats, loading: statsLoading } = useAdminStats()
-  const { restaurants, total, loading: restaurantsLoading } = useAdminRestaurants(filter)
+  const { stats, loading: statsLoading } = useAdminStats(token)
+  const { restaurants, total, loading: restaurantsLoading } = useAdminRestaurants(token, filter)
 
   // On mount check token
   useEffect(() => {
@@ -214,6 +216,8 @@ function AdminPageInner() {
           <AdminSlotDetail
             restaurantId={detail.restaurantId}
             restaurantName={detail.restaurantName}
+            restaurantSlug={detail.restaurantSlug}
+            qrUrl={detail.qrUrl}
             onBack={() => setDetail(null)}
           />
         </main>
@@ -372,7 +376,7 @@ function AdminPageInner() {
                         </td>
                         <td className="px-5 py-4 text-right">
                           <button
-                            onClick={() => setDetail({ restaurantId: r.restaurant.id, restaurantName: r.restaurant.name })}
+                            onClick={() => setDetail({ restaurantId: r.restaurant.id, restaurantName: r.restaurant.name, restaurantSlug: r.restaurant.slug, qrUrl: r.restaurant.qrUrl ?? undefined })}
                             className="bg-white border border-gray-300 hover:border-orange-600 hover:text-orange-600 text-gray-700 font-bold text-xs rounded-lg px-4 py-2 transition-all shadow-sm"
                           >
                             Manage Slots

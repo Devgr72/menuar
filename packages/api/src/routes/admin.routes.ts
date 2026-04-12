@@ -126,7 +126,16 @@ router.get('/restaurants/:restaurantId/slots', requireAdminAuth, async (req, res
     orderBy: { slotNumber: 'asc' },
   });
 
-  res.json({ slots });
+  const isR2 = process.env.USE_R2 === 'true';
+  const baseUrl = isR2
+    ? (process.env.R2_PUBLIC_URL || '').replace(/\/$/, '')
+    : (process.env.SERVER_URL || `http://localhost:${process.env.PORT ?? 3001}`);
+  const slotsWithUrls = slots.map((slot) => ({
+    ...slot,
+    photoUrls: slot.photoKeys.map((k) => isR2 ? `${baseUrl}/${k}` : `${baseUrl}/uploads/${k}`),
+  }));
+
+  res.json({ slots: slotsWithUrls });
 });
 
 /** POST /api/v1/admin/slots/:slotId/glb — upload GLB and mark slot ready */
@@ -200,6 +209,29 @@ router.put('/slots/:slotId', requireAdminAuth, async (req, res) => {
   });
 
   res.json({ slot: updated });
+});
+
+/** POST /api/v1/admin/restaurants/:restaurantId/regenerate-qr */
+router.post('/restaurants/:restaurantId/regenerate-qr', requireAdminAuth, async (req, res) => {
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id: req.params.restaurantId },
+    select: { id: true, slug: true },
+  });
+  if (!restaurant) {
+    res.status(404).json({ error: 'Restaurant not found', code: 'NOT_FOUND' });
+    return;
+  }
+
+  const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+  const arUrl = `${BASE_URL}/ar/${restaurant.slug}`;
+
+  const QRCode = (await import('qrcode')).default;
+  const qrBuffer = await QRCode.toBuffer(arUrl, { width: 512, margin: 2, color: { dark: '#1a1a1a', light: '#ffffff' } });
+  const { url } = await saveFile(`qr/${restaurant.id}`, 'main.png', qrBuffer);
+
+  await prisma.restaurant.update({ where: { id: restaurant.id }, data: { qrUrl: url } });
+
+  res.json({ qrUrl: url, arUrl });
 });
 
 /** GET /api/v1/admin/events — all payment events */

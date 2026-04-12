@@ -21,6 +21,7 @@ function toPill(dish: Dish): DishPill {
     name: dish.name,
     emoji: key ? DISH_EMOJIS[key] : '🍽️',
     modelUrl: dish.modelUrl ?? '',
+    thumbnailUrl: dish.thumbnailUrl ?? undefined,
   };
 }
 
@@ -248,7 +249,9 @@ export default function MenuARPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-none">
-            <span className="text-white font-bold text-base">${currentDish.price.toFixed(2)}</span>
+            <span className="text-white font-bold text-base">
+              {currentDish.price > 0 ? `₹${currentDish.price.toFixed(0)}` : ''}
+            </span>
             <span className="text-gray-500 text-xs bg-white/10 rounded-full w-6 h-6 flex items-center justify-center">
               {infoOpen ? '▾' : 'ℹ'}
             </span>

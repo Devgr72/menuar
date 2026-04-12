@@ -84,7 +84,7 @@ export async function updateSlotMeta(
   token: string,
   slotId: string,
   data: { dishName?: string; description?: string; ingredients?: string; price?: number; isVeg?: boolean },
-) {
+): Promise<{ slot: unknown }> {
   return apiFetch(`/api/v1/admin/slots/${slotId}`, {
     method: 'PUT',
     token,
@@ -94,4 +94,8 @@ export async function updateSlotMeta(
 
 export async function getAdminEvents(token: string) {
   return apiFetch<{ events: unknown[] }>('/api/v1/admin/events', { token })
+}
+
+export async function regenerateQR(token: string, restaurantId: string): Promise<{ qrUrl: string; arUrl: string }> {
+  return apiFetch(`/api/v1/admin/restaurants/${restaurantId}/regenerate-qr`, { method: 'POST', token })
 }

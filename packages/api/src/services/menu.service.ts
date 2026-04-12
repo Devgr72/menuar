@@ -4,6 +4,22 @@ import type { ModelStatusResponse } from '@menuar/types';
 const prisma = new PrismaClient();
 
 /**
+ * In local-disk mode, stored URLs look like http://host:3001/uploads/key.
+ * Strip the origin so the frontend receives /uploads/key, which Vite proxies
+ * back to the API — avoiding mixed-content blocks on HTTPS dev pages.
+ * In R2 mode the URL is already a public CDN URL; leave it as-is.
+ */
+function toClientUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  if (process.env.USE_R2 === 'true') return url;
+  try {
+    return new URL(url).pathname; // e.g. /uploads/models/.../dish.glb
+  } catch {
+    return url;
+  }
+}
+
+/**
  * Returns menu for the AR customer view.
  * Merges traditional Category/Dish records with DishSlot GLBs (glb_ready slots).
  */
@@ -64,8 +80,8 @@ export async function getMenuBySlug(restaurantSlug: string) {
         spiceLevel: 0,
         allergens: [] as string[],
         isAvailable: true,
-        modelUrl: slot.glbUrl ?? undefined,
-        thumbnailUrl: slot.menuPhotoUrl ?? undefined,
+        modelUrl: toClientUrl(slot.glbUrl),
+        thumbnailUrl: toClientUrl(slot.menuPhotoUrl),
         modelStatus: 'ready' as const,
         modelSource: 'tripo' as const,
         aiDescription: undefined,
