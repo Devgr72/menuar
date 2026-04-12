@@ -147,13 +147,15 @@ export async function uploadSlotPhotos(
   token: string,
   slotNumber: number,
   anglePhotos: File[],
-  meta?: { dishName?: string; description?: string; menuPhoto?: File },
+  meta?: { dishName?: string; description?: string; price?: string; isVeg?: string; menuPhoto?: File },
 ): Promise<{ slotNumber: number; menuPhotoUrl?: string; photoKeys: string[]; status: string }> {
   const formData = new FormData()
   anglePhotos.forEach((f) => formData.append('photos', f))
   if (meta?.menuPhoto) formData.append('menuPhoto', meta.menuPhoto)
   if (meta?.dishName) formData.append('dishName', meta.dishName)
   if (meta?.description) formData.append('description', meta.description)
+  if (meta?.price) formData.append('price', meta.price)
+  if (meta?.isVeg !== undefined) formData.append('isVeg', meta.isVeg)
 
   const res = await fetch(`${API_URL}/api/v1/restaurant/slots/${slotNumber}/photos`, {
     method: 'POST',

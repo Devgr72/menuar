@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 interface Props {
   qrUrl: string
   restaurantName: string
@@ -5,58 +7,71 @@ interface Props {
 }
 
 export default function QRCodeDisplay({ qrUrl, restaurantName, slug }: Props) {
-  function handleDownload() {
-    // Fetch as blob to force download (avoids browser opening image in new tab for cross-origin URLs)
-    fetch(qrUrl)
-      .then((res) => res.blob())
-      .then((blob) => {
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${slug}-qr.png`
-        a.click()
-        URL.revokeObjectURL(url)
-      })
-      .catch(() => {
-        // Fallback for cross-origin: open in new tab
-        window.open(qrUrl, '_blank')
-      })
+  const [downloading, setDownloading] = useState(false)
+
+  async function handleDownload() {
+    setDownloading(true)
+    try {
+      // Fetch as blob to force download (avoids browser opening image in new tab for cross-origin URLs)
+      const res = await fetch(qrUrl)
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${slug}-qr.png`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      // Fallback for cross-origin: open in new tab
+      window.open(qrUrl, '_blank')
+    } finally {
+      // Delay slightly to ensure user sees the "Downloaded" state feel
+      setTimeout(() => setDownloading(false), 800)
+    }
   }
 
   return (
-    <div
-      className="rounded-3xl p-6 flex flex-col sm:flex-row items-center gap-6"
-      style={{ background: '#FEFCF7', border: '1px solid #E8DDBF' }}
-    >
+    <div className="bg-[#F8FAFC] rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-8 border border-[#F1F5F9] transition-all hover:bg-white hover:shadow-lg hover:shadow-[#1e293b05]">
       {/* QR Image */}
-      <div
-        className="flex-none rounded-2xl p-3 shadow-sm"
-        style={{ background: '#fff', border: '1px solid #E8DDBF' }}
-      >
-        <img src={qrUrl} alt="Restaurant QR code" className="w-36 h-36 object-contain" />
+      <div className="flex-none bg-white rounded-3xl p-5 shadow-sm border border-[#F1F5F9] transform transition-transform group-hover:scale-105">
+        <img src={qrUrl} alt="Restaurant QR code" className="w-32 h-32 object-contain" />
       </div>
 
       {/* Info + download */}
-      <div className="flex-1 text-center sm:text-left">
-        <h3 className="font-fraunces font-semibold text-base mb-1" style={{ color: '#1C1C1A' }}>
-          Your Table QR Code
-        </h3>
-        <p className="font-dm-sans text-sm mb-1" style={{ color: '#7A6B55' }}>
-          {restaurantName}
-        </p>
-        <p className="font-dm-sans text-xs mb-4 leading-relaxed" style={{ color: '#B8A882' }}>
-          Place on tables or the entrance. Customers scan to view your dishes in AR — no app needed.
+      <div className="flex-1 text-center sm:text-left space-y-4">
+        <div>
+          <h3 className="font-fraunces font-bold text-xl text-[#1E293B]">Table Engine QR</h3>
+          <p className="font-outfit text-sm text-[#64748B] font-medium mt-1">
+            Linked to: <span className="text-[#2C4A2C] font-semibold">{restaurantName}</span>
+          </p>
+        </div>
+        
+        <p className="font-outfit text-xs text-[#94A3B8] leading-relaxed max-w-sm">
+          High-fidelity vector QR. Customers scan this to initiate the AR journey. Optimized for 300dpi print quality.
         </p>
 
         <button
           onClick={handleDownload}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-dm-sans font-semibold text-sm transition-all active:scale-[0.97]"
-          style={{ background: '#2B4A2B', color: '#F5F0E8' }}
+          disabled={downloading}
+          className={`inline-flex items-center gap-3 px-6 py-3 rounded-2xl font-outfit font-bold text-sm transition-all shadow-lg active:scale-95 disabled:opacity-70 ${
+            downloading 
+              ? 'bg-[#1E293B] text-white' 
+              : 'bg-[#2C4A2C] text-white hover:bg-[#1E293B] shadow-[#2c4a2c20]'
+          }`}
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v13m0 0l-4-4m4 4l4-4M3 21h18" />
-          </svg>
-          Download PNG
+          {downloading ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white animate-spin rounded-full" />
+              Preparing PNG...
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Download QR Code
+            </>
+          )}
         </button>
       </div>
     </div>
