@@ -31,8 +31,8 @@ router.post('/:restaurantSlug/scan', async (req: Request, res: Response) => {
   const now = Date.now();
   const lastScan = scanRateLimit.get(key) ?? 0;
 
-  if (now - lastScan < 60 * 60 * 1000) {
-    // Rate limited — ack but don't count
+  if (now - lastScan < 5 * 1000) {
+    // Rate limited — ack but don't count (5 seconds for testing)
     res.json({ counted: false });
     return;
   }
@@ -41,7 +41,7 @@ router.post('/:restaurantSlug/scan', async (req: Request, res: Response) => {
 
   // Prune old entries every 10k entries to prevent memory leak
   if (scanRateLimit.size > 10_000) {
-    const cutoff = now - 60 * 60 * 1000;
+    const cutoff = now - 5 * 1000;
     for (const [k, t] of scanRateLimit.entries()) {
       if (t < cutoff) scanRateLimit.delete(k);
     }

@@ -13,39 +13,39 @@ const CLERK_APPEARANCE = {
     colorInputBackground: '#f8fafc',
     colorInputText:       '#0f172a',
     colorDanger:          '#ef4444',
-    borderRadius:         '0.75rem',
-    fontFamily:           'Inter, "Inter var", sans-serif',
+    borderRadius:         '0.85rem',
+    fontFamily:           'Outfit, sans-serif',
   },
   elements: {
     // Force full width and remove nested "box" effects
-    rootBox:                  'w-full !max-w-full !m-0 !p-0',
-    card:                     '!shadow-none !border-0 !bg-transparent !p-0 !m-0 !w-full !max-w-full',
-    main:                     '!w-full !max-w-full !p-0 !m-0',
-    scrollBox:                '!p-0 !m-0 !shadow-none !border-0 !w-full !max-w-full',
-    pageScrollBox:            '!p-0 !m-0 !w-full !max-w-full',
+    rootBox:                  'w-full !m-0 !p-0',
+    card:                     'w-full',
+    main:                     'w-full',
+    scrollBox:                'w-full',
+    pageScrollBox:            'w-full',
     
     // Hide Clerk's internal header — we use our own custom one
-    header:                   '!hidden',
+    header:                   'hidden',
     headerTitle:              '!hidden',
     headerSubtitle:           '!hidden',
     
-    // Buttons: Premium Inter font + subtle transition
-    formButtonPrimary:        '!bg-[#2563eb] hover:!bg-[#1d4ed8] !font-bold !text-white !py-3.5 !rounded-xl !transition-all !duration-200 hover:!shadow-lg hover:!shadow-blue-200 !text-[15px] !mt-2 !w-full',
-    socialButtonsBlockButton: '!border !border-slate-200 hover:!bg-slate-50 !bg-white !text-slate-700 !font-semibold !rounded-xl !py-3.5 !text-[14px] !transition-colors !w-full',
-    socialButtonsBlockButtonText: '!font-semibold',
+    // Buttons: Premium Outfit font + subtle transition
+    formButtonPrimary:        '!bg-[#2563eb] hover:!bg-[#1d4ed8] !font-bold !text-white !py-4 !rounded-2xl !transition-all !duration-300 hover:!shadow-xl hover:!shadow-blue-500/20 !text-[15px] !mt-2 !w-full !tracking-wide',
+    socialButtonsBlockButton: '!border !border-slate-200 hover:!bg-slate-50 !bg-white !text-slate-700 !font-semibold !rounded-2xl !py-3.5 !text-[14px] !transition-all !w-full hover:!border-slate-300',
+    socialButtonsBlockButtonText: '!font-semibold !tracking-tight',
     
     // Inputs
-    formFieldInput:           '!border !border-slate-200 !rounded-xl focus:!ring-2 focus:!ring-[#2563eb]/20 focus:!border-[#2563eb] !bg-slate-50/50 !text-slate-800 placeholder:!text-slate-400 !py-3.5 !transition-all !w-full',
-    formFieldLabel:           '!text-slate-500 !font-bold !text-[11px] !uppercase !tracking-wider !mb-1.5',
+    formFieldInput:           '!border !border-slate-200 !rounded-2xl focus:!ring-4 focus:!ring-[#2563eb]/10 focus:!border-[#2563eb] !bg-slate-50/50 !text-slate-800 placeholder:!text-slate-400 !py-3.5 !transition-all !w-full',
+    formFieldLabel:           '!text-[#94A3B8] !font-bold !text-[10px] !uppercase !tracking-[0.15em] !mb-2',
     
     // Verification / OTP styling
-    otpCodeFieldInput:        '!border-2 !border-slate-200 !rounded-xl !w-12 !h-14 !text-xl !font-bold focus:!border-blue-500 focus:!ring-0',
+    otpCodeFieldInput:        '!border-2 !border-slate-200 !rounded-2xl !w-12 !h-14 !text-xl !font-bold focus:!border-[#2563eb] focus:!ring-0',
     
     // Links & footer cleanup
-    footer:                   '!text-slate-500 font-inter !mt-4',
+    footer:                   '!text-slate-500 !mt-6',
     footerActionLink:         '!text-[#2563eb] !font-bold hover:!text-[#1d4ed8] !no-underline hover:!underline',
-    footerActionText:         '!text-slate-500 !font-medium',
-    dividerText:              '!text-slate-400 !font-semibold !text-[11px] !uppercase !tracking-widest',
+    footerActionText:         '!text-[#94A3B8] !font-medium',
+    dividerText:              '!text-slate-300 !font-bold !text-[10px] !uppercase !tracking-[0.2em]',
     dividerLine:              '!bg-slate-100',
     identityPreviewText:      '!text-slate-900 !font-semibold',
     identityPreviewEditButton:'!text-[#2563eb] !font-bold',
@@ -99,7 +99,7 @@ export default function AuthPage({ mode }: AuthPageProps) {
           />
         </div>
 
-        <div className="relative z-10 flex flex-col h-full p-12 xl:p-16">
+        <div className="relative z-10 flex flex-col h-full p-8 xl:p-10">
 
           {/* ── Brand ── */}
           <div className="flex items-center gap-4 shrink-0 group cursor-default">
@@ -123,7 +123,7 @@ export default function AuthPage({ mode }: AuthPageProps) {
           </div>
 
           {/* ── Headline ── */}
-          <div className="mt-16 xl:mt-24 max-w-[500px]">
+          <div className="mt-10 xl:mt-16 max-w-[500px]">
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/15 rounded-full px-4 py-1.5 mb-8">
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
               <span className="text-blue-50 text-[10px] font-black tracking-[0.1em] uppercase">
@@ -176,7 +176,7 @@ export default function AuthPage({ mode }: AuthPageProps) {
               </div>
 
               {/* Phone shell */}
-              <div className="relative w-[280px] xl:w-[320px] transition-transform duration-500 group-hover:rotate-1 group-hover:scale-105">
+              <div className="relative w-[220px] xl:w-[260px] transition-transform duration-500 group-hover:rotate-1 group-hover:scale-105">
                 <div className="bg-slate-900 rounded-[3rem] p-[8px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] border border-white/20">
                   <div className="bg-[#0b1424] rounded-[2.6rem] overflow-hidden aspect-[9/19] relative">
                     
@@ -274,7 +274,7 @@ export default function AuthPage({ mode }: AuthPageProps) {
       {/* ═══════════════════════════════════════
           RIGHT PANEL
       ═══════════════════════════════════════ */}
-      <div className="flex-1 flex flex-col min-h-screen relative overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-screen relative overflow-y-auto">
         
         {/* Animated Background Gradients (Mesh Effect) */}
         <div className="absolute inset-0 bg-[#f8fafc] -z-10">
@@ -311,38 +311,41 @@ export default function AuthPage({ mode }: AuthPageProps) {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col justify-center items-center px-6 sm:px-12 py-12 lg:py-20">
+        <div className="flex-1 flex flex-col justify-center items-center px-6 sm:px-12 py-8 lg:py-12">
           
           {/* Constrained layout for better focus on large screens */}
-          <div className="w-full max-w-[480px]">
+          <div className="w-full max-w-[600px]">
             
             {/* Card Wrapper with Glassmorphism Effect */}
-            <div className="bg-white rounded-[2rem] border border-slate-200/80 shadow-[0_20px_50px_rgba(30,41,59,0.05)] overflow-hidden transition-all duration-300">
+            <div className="overflow-hidden transition-all duration-300">
               
               {/* Card Header */}
-              <div className="px-8 pt-10 pb-1 text-center sm:text-left">
-                <div className="lg:flex hidden mb-6 justify-center sm:justify-start">
+              <div className="px-10 pt-10 pb-1 text-center">
+                <div className="flex items-center justify-center gap-6 mb-8">
                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold tracking-wider uppercase border border-blue-100">
                       <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                       Secure Portal
                    </div>
+                   <div className="h-10 w-10 rounded-xl bg-[#FAFAFA] border border-[#F1F5F9] shadow-sm flex items-center justify-center p-1.5">
+                      <img src="/dishdekho.jpeg" alt="Logo" className="w-full h-full object-contain" />
+                   </div>
                 </div>
                 
-                <h2 className="text-[1.85rem] sm:text-[2.2rem] font-black text-slate-900 leading-[1.1] mb-2 tracking-tight">
-                  {mode === 'sign-up' ? 'Start your journey.' : 'Welcome back.'}
+                <h2 className="font-fraunces text-4xl font-bold text-[#1E293B] leading-[1.1] mb-3 tracking-tight">
+                  {mode === 'sign-up' ? 'Craft an Unforgettable Menu.' : 'Welcome Back, Chef.'}
                 </h2>
-                <p className="text-slate-500 text-[15px] sm:text-[16px] font-medium leading-relaxed">
+                <p className="font-outfit text-[#64748B] text-base font-medium leading-relaxed">
                   {mode === 'sign-up'
-                    ? 'Join hundreds of restaurants using immersive AR menus.'
-                    : 'Sign in to manage your digital AR dining experience.'}
+                    ? 'Transform your dining experience with immersive 3D and AR menus.'
+                    : 'Continue managing your digital AR dining masterpieces.'}
                 </p>
                 
                 <div className="h-px w-full bg-slate-100 mt-8" />
               </div>
 
               {/* Clerk Container - ensuring no horizontal squashing */}
-              <div className="pb-10 pt-4">
-                <div className="px-8">
+              <div className="pb-12 pt-6 flex justify-center">
+                <div className="w-full">
                   {mode === 'sign-up' ? (
                     <SignUp
                       routing="path"

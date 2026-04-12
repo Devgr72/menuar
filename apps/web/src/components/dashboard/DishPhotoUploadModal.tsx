@@ -35,6 +35,8 @@ export default function DishPhotoUploadModal({ slot, onClose, onSuccess }: Props
   // Dish details
   const [dishName, setDishName] = useState(slot.dishName ?? '')
   const [description, setDescription] = useState(slot.description ?? '')
+  const [price, setPrice] = useState(slot.price?.toString() ?? '')
+  const [isVeg, setIsVeg] = useState<boolean>(slot.isVeg ?? false)
   const [nameError, setNameError] = useState<string | null>(null)
 
   // Menu photo (single card/thumbnail photo)
@@ -99,6 +101,8 @@ export default function DishPhotoUploadModal({ slot, onClose, onSuccess }: Props
       const result = await uploadSlotPhotos(token, slot.slotNumber, anglePhotos, {
         dishName: dishName.trim(),
         description: description.trim(),
+        price: price.trim(),
+        isVeg: String(isVeg),
         menuPhoto: menuPhoto ?? undefined,
       })
       onSuccess({ slotNumber: result.slotNumber, status: result.status })
@@ -259,6 +263,47 @@ export default function DishPhotoUploadModal({ slot, onClose, onSuccess }: Props
                 <p className="font-dm-sans text-xs text-right mt-0.5" style={{ color: '#B8A882' }}>
                   {description.length}/200
                 </p>
+              </div>
+
+              <div>
+                <label className="block font-dm-sans text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#7A6B55' }}>
+                  Price (Optional)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-dm-sans text-sm text-[#7A6B55]">₹</span>
+                  <input
+                    type="number"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="299"
+                    className="w-full rounded-xl pl-8 pr-4 py-3 font-dm-sans text-sm outline-none"
+                    style={{ background: '#F9F4E8', border: '1px solid #E8DDBF', color: '#1C1C1A' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-dm-sans text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#7A6B55' }}>
+                  Dietary <span className="font-normal normal-case" style={{ color: '#B8A882' }}>(optional)</span>
+                </label>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setIsVeg(true)}
+                    className={`flex-1 py-3 rounded-xl font-dm-sans text-sm font-semibold transition-all border ${
+                      isVeg ? 'bg-green-50 text-green-700 border-green-500' : 'bg-[#F9F4E8] text-[#7A6B55] border-[#E8DDBF]'
+                    }`}
+                  >
+                    Vegetarian
+                  </button>
+                  <button
+                    onClick={() => setIsVeg(false)}
+                    className={`flex-1 py-3 rounded-xl font-dm-sans text-sm font-semibold transition-all border ${
+                      !isVeg ? 'bg-red-50 text-red-700 border-red-500' : 'bg-[#F9F4E8] text-[#7A6B55] border-[#E8DDBF]'
+                    }`}
+                  >
+                    Non-Veg
+                  </button>
+                </div>
               </div>
             </div>
 

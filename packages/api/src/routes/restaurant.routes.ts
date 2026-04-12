@@ -216,7 +216,10 @@ router.post(
       photoKeys.push(key);
     }
 
-    const { dishName, description } = req.body as { dishName?: string; description?: string };
+    const { dishName, description, price, isVeg } = req.body as { dishName?: string; description?: string; price?: string; isVeg?: string };
+
+    const parsedPrice = price && !isNaN(parseFloat(price)) ? parseFloat(price) : undefined;
+    const parsedIsVeg = isVeg ? isVeg === 'true' : undefined;
 
     const updated = await prisma.dishSlot.update({
       where: { id: slot.id },
@@ -226,6 +229,8 @@ router.post(
         status: 'photos_uploaded',
         ...(dishName?.trim() ? { dishName: dishName.trim() } : {}),
         ...(description?.trim() ? { description: description.trim() } : {}),
+        ...(parsedPrice !== undefined ? { price: parsedPrice } : {}),
+        ...(parsedIsVeg !== undefined ? { isVeg: parsedIsVeg } : {}),
       },
     });
 

@@ -12,6 +12,7 @@ export default {
         inter:     ['Inter', 'sans-serif'],
         fraunces:  ['Fraunces', 'Georgia', 'serif'],
         'dm-sans': ['"DM Sans"', 'sans-serif'],
+        outfit:    ['Outfit', 'sans-serif'],
       },
       colors: {
         brand: {
