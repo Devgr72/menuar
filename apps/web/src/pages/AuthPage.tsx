@@ -9,47 +9,49 @@ const CLERK_APPEARANCE = {
     colorPrimary:         '#2563eb',
     colorBackground:      '#ffffff',
     colorText:            '#0f172a',
-    colorTextSecondary:   '#64748b',
-    colorInputBackground: '#f8fafc',
+    colorTextSecondary:   '#475569',
+    colorInputBackground: '#ffffff',
     colorInputText:       '#0f172a',
     colorDanger:          '#ef4444',
     borderRadius:         '0.75rem',
     fontFamily:           'Inter, "Inter var", sans-serif',
   },
   elements: {
-    // Force full width and remove nested "box" effects
     rootBox:                  'w-full !max-w-full !m-0 !p-0',
     card:                     '!shadow-none !border-0 !bg-transparent !p-0 !m-0 !w-full !max-w-full',
     main:                     '!w-full !max-w-full !p-0 !m-0',
     scrollBox:                '!p-0 !m-0 !shadow-none !border-0 !w-full !max-w-full',
     pageScrollBox:            '!p-0 !m-0 !w-full !max-w-full',
     
-    // Hide Clerk's internal header — we use our own custom one
     header:                   '!hidden',
     headerTitle:              '!hidden',
     headerSubtitle:           '!hidden',
     
-    // Buttons: Premium Inter font + subtle transition
-    formButtonPrimary:        '!bg-[#2563eb] hover:!bg-[#1d4ed8] !font-bold !text-white !py-3.5 !rounded-xl !transition-all !duration-200 hover:!shadow-lg hover:!shadow-blue-200 !text-[15px] !mt-2 !w-full',
-    socialButtonsBlockButton: '!border !border-slate-200 hover:!bg-slate-50 !bg-white !text-slate-700 !font-semibold !rounded-xl !py-3.5 !text-[14px] !transition-colors !w-full',
-    socialButtonsBlockButtonText: '!font-semibold',
+    // Buttons: Clean SaaS UI (Stripe/Clerk Style)
+    formButtonPrimary:        '!bg-[#2563eb] hover:!bg-[#1d4ed8] !font-semibold !text-white !py-3 !rounded-lg !transition-all !duration-200 !text-[15px] !mt-6 !w-full !border-0 !shadow-sm hover:!shadow-md',
+    socialButtonsBlockButton: '!border !border-slate-200 hover:!bg-slate-50 !bg-white !text-slate-700 !font-medium !rounded-lg !py-3 !text-[14px] !transition-all !w-full !shadow-sm hover:!shadow !mt-2',
+    socialButtonsBlockButtonText: '!font-medium !tracking-tight',
+    socialButtonsProviderIcon: '!w-5 !h-5',
     
-    // Inputs
-    formFieldInput:           '!border !border-slate-200 !rounded-xl focus:!ring-2 focus:!ring-[#2563eb]/20 focus:!border-[#2563eb] !bg-slate-50/50 !text-slate-800 placeholder:!text-slate-400 !py-3.5 !transition-all !w-full',
-    formFieldLabel:           '!text-slate-500 !font-bold !text-[11px] !uppercase !tracking-wider !mb-1.5',
+    // Inputs: Proper spacing and consistent alignment
+    formFieldInput:           '!border !border-slate-200 !rounded-lg focus:!ring-2 focus:!ring-blue-100 focus:!border-blue-500 !bg-white !text-slate-800 placeholder:!text-slate-400 !py-3 !px-4 !transition-all !w-full !font-normal',
+    formFieldLabel:           '!text-slate-700 !font-semibold !text-[13px] !mb-1.5 !mt-5 !block',
+    formFieldInputGroup:      '!mb-2',
     
-    // Verification / OTP styling
-    otpCodeFieldInput:        '!border-2 !border-slate-200 !rounded-xl !w-12 !h-14 !text-xl !font-bold focus:!border-blue-500 focus:!ring-0',
+    // OR Divider
+    dividerRow:               '!my-10 !opacity-50',
+    dividerText:              '!text-slate-400 !font-semibold !text-[12px]',
+    dividerLine:              '!bg-slate-200',
     
-    // Links & footer cleanup
-    footer:                   '!text-slate-500 font-inter !mt-4',
-    footerActionLink:         '!text-[#2563eb] !font-bold hover:!text-[#1d4ed8] !no-underline hover:!underline',
+    // Identity & Errors
+    identityPreviewText:      '!text-slate-900 !font-medium',
+    identityPreviewEditButton:'!text-[#2563eb] !font-semibold',
+    formFieldErrorText:       '!text-red-500 !text-xs !font-medium !mt-1.5',
+    
+    // Footer
+    footer:                   '!text-slate-500 !mt-10',
+    footerActionLink:         '!text-[#2563eb] !font-semibold hover:!underline',
     footerActionText:         '!text-slate-500 !font-medium',
-    dividerText:              '!text-slate-400 !font-semibold !text-[11px] !uppercase !tracking-widest',
-    dividerLine:              '!bg-slate-100',
-    identityPreviewText:      '!text-slate-900 !font-semibold',
-    identityPreviewEditButton:'!text-[#2563eb] !font-bold',
-    formFieldErrorText:       '!text-red-500 !text-xs !font-medium !mt-1',
   },
 }
 
@@ -123,7 +125,7 @@ export default function AuthPage({ mode }: AuthPageProps) {
           </div>
 
           {/* ── Headline ── */}
-          <div className="mt-16 xl:mt-24 max-w-[500px]">
+          <div className="mt-12 xl:mt-20 max-w-[650px] shrink-0">
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/15 rounded-full px-4 py-1.5 mb-8">
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
               <span className="text-blue-50 text-[10px] font-black tracking-[0.1em] uppercase">
@@ -131,7 +133,7 @@ export default function AuthPage({ mode }: AuthPageProps) {
               </span>
             </div>
             
-            <h1 className="text-[3.2rem] xl:text-[4rem] font-black text-white leading-[1.05] tracking-tight">
+            <h1 className="text-[3.2rem] xl:text-[3.8rem] font-black text-white leading-[1.05] tracking-tight">
               Let guests{' '}
               <span className="relative inline-block">
                 <span className="text-amber-400 italic">see the dish</span>
@@ -145,17 +147,17 @@ export default function AuthPage({ mode }: AuthPageProps) {
               <br />before they order.
             </h1>
             
-            <p className="text-blue-100/70 text-lg mt-8 leading-relaxed font-medium">
-              Immersive WebAR menus — scan a QR, see 3D dishes <span className="text-white">float on the table</span>. No apps, zero friction, maximum engagement.
+            <p className="text-blue-100/70 text-lg mt-6 leading-relaxed font-medium">
+              Immersive WebAR menus — scan a QR, see 3D dishes <span className="text-white font-bold">float on the table</span>. No apps, zero friction.
             </p>
           </div>
 
           {/* ── Phone Mockup (Interactive Model) ── */}
-          <div className="flex-1 flex items-center justify-center -mt-10">
+          <div className="flex-1 flex items-center justify-center min-h-[420px] relative">
             <div className="relative group">
               
               {/* Floating Badge Left */}
-              <div className="absolute -left-16 top-[20%] z-20 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/50 p-3 flex items-center gap-3 animate-float pointer-events-none">
+              <div className="absolute -left-20 top-[15%] z-50 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/50 p-3 flex items-center gap-3 animate-float pointer-events-none">
                 <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center text-xl">🔥</div>
                 <div className="pr-2">
                   <p className="text-slate-900 text-[11px] font-black leading-none uppercase tracking-wider">Top Rated</p>
@@ -164,7 +166,7 @@ export default function AuthPage({ mode }: AuthPageProps) {
               </div>
 
               {/* Floating Badge Right */}
-              <div className="absolute -right-16 bottom-[30%] z-20 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/50 p-4 flex items-center gap-4 animate-float-2 pointer-events-none">
+              <div className="absolute -right-20 bottom-[25%] z-50 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/50 p-4 flex items-center gap-4 animate-float-2 pointer-events-none">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-xl">🔍</div>
                 <div>
                   <p className="text-slate-900 text-[12px] font-black leading-none uppercase tracking-wider">Live Preview</p>
@@ -176,84 +178,114 @@ export default function AuthPage({ mode }: AuthPageProps) {
               </div>
 
               {/* Phone shell */}
-              <div className="relative w-[280px] xl:w-[320px] transition-transform duration-500 group-hover:rotate-1 group-hover:scale-105">
-                <div className="bg-slate-900 rounded-[3rem] p-[8px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] border border-white/20">
+              <div className="relative w-[280px] xl:w-[310px] transition-transform duration-700 group-hover:scale-105">
+                <div className="bg-slate-900 rounded-[3.2rem] p-[10px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.6)] border border-white/20 relative">
+                  {/* Outer Glow */}
+                  <div className="absolute inset-0 rounded-[3.2rem] bg-blue-500/10 blur-2xl -z-10 group-hover:bg-blue-500/20 transition-all" />
+                  
                   <div className="bg-[#0b1424] rounded-[2.6rem] overflow-hidden aspect-[9/19] relative">
                     
                     {/* Screen Content */}
                     <div className="absolute inset-0 bg-gradient-to-b from-[#0f172a] via-[#1e293b] to-[#0f172a]" />
                     
                     {/* AR Scanning effect */}
-                    <div className="absolute inset-0">
-                       <div className="absolute top-[15%] left-[10%] w-[80%] h-[60%] border-2 border-dashed border-white/10 rounded-3xl" />
-                       <div className="absolute top-[15%] left-[10%] w-6 h-6 border-t-4 border-l-4 border-amber-400 rounded-tl-lg" />
-                       <div className="absolute top-[15%] right-[10%] w-6 h-6 border-t-4 border-r-4 border-amber-400 rounded-tr-lg" />
-                       <div className="absolute bottom-[25%] left-[10%] w-6 h-6 border-b-4 border-l-4 border-amber-400 rounded-bl-lg" />
-                       <div className="absolute bottom-[25%] right-[10%] w-6 h-6 border-b-4 border-r-4 border-amber-400 rounded-br-lg" />
+                    <div className="absolute inset-0 z-10 pointer-events-none">
+                       {/* Scanner Box */}
+                       <div className="absolute top-[12%] left-[8%] w-[84%] h-[65%] border border-white/5 rounded-3xl" />
                        
-                       <div className="absolute top-0 w-full h-1/2 bg-gradient-to-b from-amber-400/20 to-transparent opacity-30 animate-scanline" />
+                       {/* Scanner Corners */}
+                       <div className="absolute top-[12%] left-[8%] w-8 h-8 border-t-[3px] border-l-[3px] border-amber-400 rounded-tl-xl shadow-[0_0_10px_#fbbf24]" />
+                       <div className="absolute top-[12%] right-[8%] w-8 h-8 border-t-[3px] border-r-[3px] border-amber-400 rounded-tr-xl shadow-[0_0_10px_#fbbf24]" />
+                       <div className="absolute bottom-[23%] left-[8%] w-8 h-8 border-b-[3px] border-l-[3px] border-amber-400 rounded-bl-xl shadow-[0_0_10px_#fbbf24]" />
+                       <div className="absolute bottom-[23%] right-[8%] w-8 h-8 border-b-[3px] border-r-[3px] border-amber-400 rounded-br-xl shadow-[0_0_10px_#fbbf24]" />
+                       
+                       {/* Laser Beam */}
+                       <div className="absolute w-[80%] left-[10%] h-[2px] bg-amber-400 shadow-[0_0_20px_#fbbf24,0_0_40px_#fbbf24] z-20 animate-laser" />
+                       
+                       {/* Scanning Overlay Pulse */}
+                       <div className="absolute inset-0 bg-amber-400/5 animate-pulse-slow" />
                     </div>
 
-                    {/* Main Dish (AR) */}
-                    <div className="absolute top-[40%] left-1/2 -translate-x-1/2 -translate-y-1/2 text-[100px] animate-float drop-shadow-[0_0_30px_rgba(251,191,36,0.5)]">
-                      🍛
+                    {/* 3D Dishes Rendering (Animated) */}
+                    <div className="absolute inset-x-0 top-[35%] flex items-center justify-center">
+                        {/* Dish 1: Pizza */}
+                        <div className="absolute text-[80px] animate-dish-1 drop-shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+                          🍕
+                        </div>
+                        {/* Dish 2: Ramen */}
+                        <div className="absolute text-[85px] animate-dish-2 drop-shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+                          🍜
+                        </div>
+                        {/* Dish 3: Biryani */}
+                        <div className="absolute text-[90px] animate-dish-3 drop-shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+                          🍛
+                        </div>
                     </div>
 
                     {/* UI Overlay */}
-                    <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-slate-950 to-transparent">
+                    <div className="absolute inset-x-0 bottom-0 p-8 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent z-20">
                         <div className="flex items-end justify-between gap-4">
                            <div className="flex-1">
-                              <h3 className="text-white font-black text-xl leading-tight">Mughlai Biryani</h3>
-                              <p className="text-amber-400 font-black text-sm mt-1">Classic Spicy Indian</p>
+                              <p className="text-amber-400 font-black text-[10px] uppercase tracking-widest mb-1">Recommended</p>
+                              <h3 className="text-white font-black text-xl leading-tight">Gourmet Selection</h3>
+                              <p className="text-blue-200/50 text-[11px] font-bold mt-1 italic">3D View Experience</p>
                            </div>
-                           <div className="bg-white/10 backdrop-blur-md rounded-xl px-3 py-1.5 border border-white/20">
-                              <span className="text-white font-black">₹449</span>
+                           <div className="bg-white/10 backdrop-blur-md rounded-2xl px-3 py-2 border border-white/20">
+                              <span className="text-white font-black text-lg">₹449</span>
                            </div>
                         </div>
-                        <div className="mt-6 flex gap-2">
-                           <div className="flex-1 h-3 rounded-full bg-white/10 overflow-hidden">
-                              <div className="h-full w-2/3 bg-amber-400" />
-                           </div>
-                           <div className="w-12 h-3 rounded-full bg-white/5" />
-                        </div>
+                        <button className="w-full mt-6 py-3 bg-amber-400 rounded-2xl text-slate-950 font-black text-sm tracking-wider uppercase shadow-[0_10px_20px_rgba(251,191,36,0.2)] hover:scale-[1.02] transition-transform">
+                          Order in AR
+                        </button>
                     </div>
 
                     {/* Notch */}
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-950 rounded-b-3xl z-30" />
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-8 bg-slate-950 rounded-b-[2rem] z-30 shadow-inner" />
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ── Stats bar ── */}
-          <div className="shrink-0 flex items-center gap-4 p-1 rounded-[2rem] bg-white/5 backdrop-blur-xl border border-white/10 overflow-hidden shadow-2xl">
-            {[
-              { v: '3s',   l: 'Load time',    c: 'amber' },
-              { v: '0',    l: 'App installs', c: 'blue'  },
-              { v: '100%', l: 'Mobile-ready', c: 'green' },
-            ].map((s) => (
-              <div key={s.l} className="flex-1 flex flex-col items-center py-6 px-4 rounded-[1.8rem] hover:bg-white/[0.03] transition-colors cursor-default">
-                <span className="text-[1.8rem] font-black text-white leading-none tracking-tight">
-                  {s.v}
-                </span>
-                <span className="text-[10px] font-black uppercase tracking-[0.1em] text-white/40 mt-2">
-                  {s.l}
-                </span>
-              </div>
-            ))}
-          </div>
+
 
         </div>
 
         <style>{`
-          @keyframes scanline {
-            0% { transform: translateY(-100%); }
-            100% { transform: translateY(200%); }
+          @keyframes laser {
+            0% { top: 12%; opacity: 0; }
+            10% { opacity: 1; }
+            50% { top: 77%; opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 12%; opacity: 0; }
           }
-          .animate-scanline {
-            animation: scanline 3s linear infinite;
+          .animate-laser {
+            animation: laser 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
           }
+          @keyframes pulse-slow {
+            0%, 100% { opacity: 0.05; }
+            50% { opacity: 0.15; }
+          }
+          .animate-pulse-slow {
+            animation: pulse-slow 4s ease-in-out infinite;
+          }
+          @keyframes dish-1 {
+            0%, 33.33% { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+            33.34%, 100% { opacity: 0; transform: translateY(50px) scale(0.5); }
+          }
+          @keyframes dish-2 {
+            0%, 33.33% { opacity: 0; transform: translateY(-50px) scale(0.5); }
+            33.34%, 66.66% { opacity: 1; transform: translateY(0) scale(1) rotate(5deg); }
+            66.67%, 100% { opacity: 0; transform: translateY(50px) scale(0.5); }
+          }
+          @keyframes dish-3 {
+            0%, 66.66% { opacity: 0; transform: translateY(-50px) scale(0.5); }
+            66.67%, 100% { opacity: 1; transform: translateY(0) scale(1) rotate(-5deg); }
+          }
+          .animate-dish-1 { animation: dish-1 12s infinite; }
+          .animate-dish-2 { animation: dish-2 12s infinite; }
+          .animate-dish-3 { animation: dish-3 12s infinite; }
+          
           @keyframes float {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-15px); }
@@ -263,7 +295,7 @@ export default function AuthPage({ mode }: AuthPageProps) {
           }
           @keyframes float-2 {
             0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+            50% { transform: translateY(-12px); }
           }
           .animate-float-2 {
             animation: float-2 7s ease-in-out infinite 1s;
@@ -313,36 +345,32 @@ export default function AuthPage({ mode }: AuthPageProps) {
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col justify-center items-center px-6 sm:px-12 py-12 lg:py-20">
           
-          {/* Constrained layout for better focus on large screens */}
-          <div className="w-full max-w-[480px]">
-            
-            {/* Card Wrapper with Glassmorphism Effect */}
-            <div className="bg-white rounded-[2rem] border border-slate-200/80 shadow-[0_20px_50px_rgba(30,41,59,0.05)] overflow-hidden transition-all duration-300">
+          {/* Card Wrapper - Clean Modern SaaS UI */}
+          <div className="w-full max-w-[500px]">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_10px_40px_-20px_rgba(0,0,0,0.1)] overflow-hidden">
               
-              {/* Card Header */}
-              <div className="px-8 pt-10 pb-1 text-center sm:text-left">
-                <div className="lg:flex hidden mb-6 justify-center sm:justify-start">
-                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold tracking-wider uppercase border border-blue-100">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+              {/* Card Header Section - Spacious Breathing Room */}
+              <div className="px-8 sm:px-12 pt-12 pb-4 text-center sm:text-left">
+                <div className="hidden sm:block mb-8">
+                   <div className="inline-flex items-center gap-2 px-2.5 py-0.5 bg-blue-50 text-blue-600 rounded-md text-[11px] font-semibold tracking-wide uppercase border border-blue-100/50">
+                      <span className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
                       Secure Portal
                    </div>
                 </div>
                 
-                <h2 className="text-[1.85rem] sm:text-[2.2rem] font-black text-slate-900 leading-[1.1] mb-2 tracking-tight">
-                  {mode === 'sign-up' ? 'Start your journey.' : 'Welcome back.'}
+                <h2 className="text-3xl font-bold text-slate-900 leading-tight mb-2 tracking-tight">
+                  {mode === 'sign-up' ? 'Create Account' : 'Welcome Back'}
                 </h2>
-                <p className="text-slate-500 text-[15px] sm:text-[16px] font-medium leading-relaxed">
+                <p className="text-slate-500 text-base font-medium leading-relaxed tracking-tight">
                   {mode === 'sign-up'
-                    ? 'Join hundreds of restaurants using immersive AR menus.'
-                    : 'Sign in to manage your digital AR dining experience.'}
+                    ? "Start creating immersive AR experiences."
+                    : 'Sign in to manage your digital menus.'}
                 </p>
-                
-                <div className="h-px w-full bg-slate-100 mt-8" />
               </div>
 
-              {/* Clerk Container - ensuring no horizontal squashing */}
-              <div className="pb-10 pt-4">
-                <div className="px-8">
+              {/* Form Hosting Area - Guaranteed Spacing */}
+              <div className="pb-16 px-8 sm:px-12">
+                <div className="space-y-6">
                   {mode === 'sign-up' ? (
                     <SignUp
                       routing="path"
