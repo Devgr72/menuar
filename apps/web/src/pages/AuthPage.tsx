@@ -101,7 +101,7 @@ export default function AuthPage({ mode }: AuthPageProps) {
           />
         </div>
 
-        <div className="relative z-10 flex flex-col h-full p-12 xl:p-16">
+        <div className="relative z-10 flex flex-col h-full p-8 xl:p-10">
 
           {/* ── Brand ── */}
           <div className="flex items-center gap-4 shrink-0 group cursor-default">
@@ -247,8 +247,6 @@ export default function AuthPage({ mode }: AuthPageProps) {
             </div>
           </div>
 
-
-
         </div>
 
         <style>{`
@@ -306,7 +304,7 @@ export default function AuthPage({ mode }: AuthPageProps) {
       {/* ═══════════════════════════════════════
           RIGHT PANEL
       ═══════════════════════════════════════ */}
-      <div className="flex-1 flex flex-col min-h-screen relative overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-screen relative overflow-y-auto">
         
         {/* Animated Background Gradients (Mesh Effect) */}
         <div className="absolute inset-0 bg-[#f8fafc] -z-10">
@@ -343,7 +341,7 @@ export default function AuthPage({ mode }: AuthPageProps) {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col justify-center items-center px-6 sm:px-12 py-12 lg:py-20">
+        <div className="flex-1 flex flex-col justify-center items-center px-6 sm:px-12 py-8 lg:py-12">
           
           {/* Card Wrapper - Clean Modern SaaS UI */}
           <div className="w-full max-w-[500px]">
