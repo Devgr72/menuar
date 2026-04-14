@@ -3,15 +3,17 @@ import { useAuth } from '@clerk/react'
 import { getDashboard } from '../api/client'
 import type { DashboardResponse } from '@menuar/types'
 
+const POLL_INTERVAL_MS = 10_000
+
 export function useDashboard() {
   const { getToken } = useAuth()
   const [data, setData] = useState<DashboardResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetch = useCallback(async () => {
+  const loadData = useCallback(async (showLoading: boolean) => {
     try {
-      setLoading(true)
+      if (showLoading) setLoading(true)
       setError(null)
       const token = await getToken()
       if (!token) throw new Error('Not authenticated')
@@ -20,13 +22,15 @@ export function useDashboard() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load dashboard')
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
     }
   }, [getToken])
 
   useEffect(() => {
-    fetch()
-  }, [fetch])
+    loadData(true)
+    const interval = setInterval(() => loadData(false), POLL_INTERVAL_MS)
+    return () => clearInterval(interval)
+  }, [loadData])
 
-  return { data, loading, error, refetch: fetch }
+  return { data, loading, error, refetch: () => loadData(true) }
 }

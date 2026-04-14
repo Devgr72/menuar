@@ -381,10 +381,16 @@ function ProfileEditWrapper({
                 </div>
 
                 <div className="bg-[#334155] rounded-2xl p-6 mt-8">
-                  <p className="text-xs text-[#94A3B8] font-bold uppercase tracking-widest mb-4">Engagement Analytics</p>
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-xs text-[#94A3B8] font-bold uppercase tracking-widest">Engagement Analytics</p>
+                    <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 uppercase tracking-widest">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Live
+                    </span>
+                  </div>
                   <div className="flex items-end gap-3">
                     <p className="text-5xl font-fraunces font-bold">{restaurant.scanCount}</p>
-                    <p className="text-sm font-outfit text-[#94A3B8] mb-2 font-medium">Real-time Scans</p>
+                    <p className="text-sm font-outfit text-[#94A3B8] mb-2 font-medium">QR Scans</p>
                   </div>
                 </div>
               </div>
