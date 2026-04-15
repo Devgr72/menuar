@@ -2,8 +2,12 @@ import { SignIn, SignUp } from "@clerk/react";
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-export default function AuthPage() {
-  const [activeMode, setActiveMode] = useState<"sign-in" | "sign-up">("sign-up");
+interface Props {
+  mode: 'sign-in' | 'sign-up'
+}
+
+export default function AuthPage({ mode }: Props) {
+  const [activeMode, setActiveMode] = useState<"sign-in" | "sign-up">(mode);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -198,12 +202,12 @@ export default function AuthPage() {
                     appearance={CLERK_STYLE} 
                   />
                 ) : (
-                  <SignIn 
-                    routing="path" 
-                    path="/sign-in" 
-                    signUpUrl="/sign-up" 
-                    fallbackRedirectUrl="/dashboard" 
-                    appearance={CLERK_STYLE} 
+                  <SignIn
+                    routing="path"
+                    path="/sign-in"
+                    signUpUrl="/sign-up"
+                    fallbackRedirectUrl="/"
+                    appearance={CLERK_STYLE}
                   />
                 )}
               </div>
