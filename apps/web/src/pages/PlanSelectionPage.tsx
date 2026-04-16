@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth, useUser } from '@clerk/react'
+import { useSession } from '../lib/auth-client'
 import { createSubscription, getSubscriptionStatus } from '../api/client'
 
 const IS_DEV = import.meta.env.DEV
@@ -61,8 +61,7 @@ type PageState = 'checking' | 'ready' | 'error'
 
 export default function PlanSelectionPage() {
   const navigate = useNavigate()
-  const { getToken } = useAuth()
-  const { user } = useUser()
+  const { data: session } = useSession()
   const [pageState, setPageState] = useState<PageState>('checking')
   const [subscribing, setSubscribing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -73,10 +72,7 @@ export default function PlanSelectionPage() {
     async function checkStatus() {
       log('Checking subscription status on mount')
       try {
-        const token = await getToken()
-        if (!token || cancelled) { log('No token yet, showing page'); setPageState('ready'); return }
-        log('Got Clerk token, calling /subscription/status')
-        const { subscription } = await getSubscriptionStatus(token)
+        const { subscription } = await getSubscriptionStatus()
         if (cancelled) return
         log('Subscription status result', subscription)
         if (subscription?.status === 'active') {
@@ -101,29 +97,23 @@ export default function PlanSelectionPage() {
     }
     checkStatus()
     return () => { cancelled = true }
-  }, [getToken, navigate])
+  }, [navigate])
 
   async function handleSubscribe() {
     setSubscribing(true)
     setError(null)
-    log('Subscribe clicked', { user: user?.primaryEmailAddress?.emailAddress })
+    log('Subscribe clicked')
 
     try {
-      // Step 1: Get Clerk token
-      log('Step 1: Getting Clerk token')
-      const token = await getToken()
-      if (!token) throw new Error('Not authenticated — please refresh and try again')
-      log('Step 1 ✓ Token obtained')
-
-      // Step 2: Load Razorpay SDK
-      log('Step 2: Loading Razorpay checkout.js')
+      // Step 1: Load Razorpay SDK
+      log('Step 1: Loading Razorpay checkout.js')
       const loaded = await loadRazorpayScript()
       if (!loaded) throw new Error('Failed to load Razorpay SDK. Check your internet connection.')
-      log('Step 2 ✓ Razorpay SDK loaded, window.Razorpay:', typeof window.Razorpay)
+      log('Step 1 ✓ Razorpay SDK loaded, window.Razorpay:', typeof window.Razorpay)
 
-      // Step 3: Create subscription on backend
-      log('Step 3: Calling POST /api/v1/subscription/create')
-      const { razorpaySubId, razorpayKeyId, checkoutUrl } = await createSubscription(token)
+      // Step 2: Create subscription on backend
+      log('Step 2: Calling POST /api/v1/subscription/create')
+      const { razorpaySubId, razorpayKeyId, checkoutUrl } = await createSubscription()
       log('Step 3 ✓ Subscription created', { razorpaySubId, razorpayKeyId: razorpayKeyId?.slice(0, 12) + '…', checkoutUrl })
 
       if (!razorpayKeyId) throw new Error('Payment service not configured — check RAZORPAY_KEY_ID in API .env')
@@ -138,8 +128,8 @@ export default function PlanSelectionPage() {
         description: 'Monthly AR Menu Subscription',
         image: '/dishdekho.jpeg',
         prefill: {
-          name: user?.fullName ?? undefined,
-          email: user?.primaryEmailAddress?.emailAddress ?? undefined,
+          name: session?.user?.name ?? undefined,
+          email: session?.user?.email ?? undefined,
         },
         theme: { color: '#2563eb' },
         modal: {

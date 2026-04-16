@@ -3,9 +3,8 @@
  * Allows manually triggering webhook side-effects during local development.
  */
 import { Router } from 'express';
-import { getAuth } from '@clerk/express';
 import { PrismaClient } from '@prisma/client';
-import { requireClerkAuth } from '../middleware/clerkAuth';
+import { requireAuth } from '../middleware/auth';
 import QRCode from 'qrcode';
 import { saveFile } from '../services/storage.service';
 
@@ -18,15 +17,11 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
  * Manually marks the current user's subscription as active and generates QR.
  * ONLY available when NODE_ENV !== 'production'.
  */
-router.post('/activate', requireClerkAuth, async (req, res) => {
-  const { userId } = getAuth(req);
-  if (!userId) {
-    res.status(401).json({ error: 'Unauthorized', code: 'AUTH_REQUIRED' });
-    return;
-  }
+router.post('/activate', requireAuth, async (req, res) => {
+  const userId = res.locals.userId as string;
 
   const owner = await prisma.restaurantOwner.findUnique({
-    where: { clerkUserId: userId },
+    where: { userId },
     include: { restaurant: { include: { subscription: true } } },
   });
 

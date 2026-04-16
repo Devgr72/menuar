@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useAuth } from '@clerk/react'
+import { useSession } from '../lib/auth-client'
 import { getMe } from '../api/client'
 
 export type AuthStatus =
@@ -14,16 +14,12 @@ export interface AuthState {
 }
 
 /**
- * Determines the user's full lifecycle state by combining Clerk auth
+ * Determines the user's full lifecycle state by combining Better Auth session
  * with the DB record from /api/v1/auth/me.
- *
- * Result is stable for the lifetime of the component — call this at
- * route-guard level (ProtectedRoute, RootRedirect) where it renders once.
  */
 export function useAuthState(): AuthState {
-  const { isLoaded, isSignedIn, getToken } = useAuth()
+  const { data: session, isPending } = useSession()
   const [status, setStatus] = useState<AuthStatus>('loading')
-  // Prevent setState after unmount
   const mountedRef = useRef(true)
 
   useEffect(() => {
@@ -32,9 +28,9 @@ export function useAuthState(): AuthState {
   }, [])
 
   useEffect(() => {
-    if (!isLoaded) return
+    if (isPending) return
 
-    if (!isSignedIn) {
+    if (!session) {
       setStatus('unauthenticated')
       return
     }
@@ -43,10 +39,7 @@ export function useAuthState(): AuthState {
     let cancelled = false
     async function check() {
       try {
-        const token = await getToken()
-        if (!token || cancelled) return
-
-        const { owner, subscription } = await getMe(token)
+        const { owner, subscription } = await getMe()
 
         if (cancelled || !mountedRef.current) return
 
@@ -61,8 +54,6 @@ export function useAuthState(): AuthState {
           setStatus('needs_payment')
         }
       } catch {
-        // If the API returns NOT_REGISTERED (404) treat as needs_onboarding.
-        // Any other error: default to needs_onboarding so user can re-register.
         if (cancelled || !mountedRef.current) return
         setStatus('needs_onboarding')
       }
@@ -70,7 +61,7 @@ export function useAuthState(): AuthState {
 
     check()
     return () => { cancelled = true }
-  }, [isLoaded, isSignedIn, getToken])
+  }, [isPending, session])
 
   return { status }
 }

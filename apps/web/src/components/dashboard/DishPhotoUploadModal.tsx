@@ -1,5 +1,4 @@
 import { useState, useRef } from 'react'
-import { useAuth } from '@clerk/react'
 import { uploadSlotPhotos } from '../../api/client'
 import type { DishSlot } from '@menuar/types'
 
@@ -26,7 +25,6 @@ const STEPS: { key: Step; label: string }[] = [
 ]
 
 export default function DishPhotoUploadModal({ slot, onClose, onSuccess }: Props) {
-  const { getToken } = useAuth()
 
   // Step
   const [step, setStep] = useState<Step>('instructions')
@@ -96,9 +94,7 @@ export default function DishPhotoUploadModal({ slot, onClose, onSuccess }: Props
     setUploading(true)
     setError(null)
     try {
-      const token = await getToken()
-      if (!token) throw new Error('Not authenticated')
-      const result = await uploadSlotPhotos(token, slot.slotNumber, anglePhotos, {
+      const result = await uploadSlotPhotos(slot.slotNumber, anglePhotos, {
         dishName: dishName.trim(),
         description: description.trim(),
         price: price.trim(),

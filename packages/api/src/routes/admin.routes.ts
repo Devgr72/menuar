@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { PrismaClient } from '@prisma/client';
-import { requireAdminAuth } from '../middleware/clerkAuth';
+import { requireAdminAuth } from '../middleware/auth';
 import { saveFile, deleteFile } from '../services/storage.service';
 import { z } from 'zod';
 import jwt from 'jsonwebtoken';

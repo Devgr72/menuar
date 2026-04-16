@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthenticateWithRedirectCallback } from '@clerk/react'
 import MenuARPage from './pages/MenuARPage'
 import AuthPage from './pages/AuthPage'
 import OnboardingPage from './pages/OnboardingPage'
@@ -43,31 +42,9 @@ export default function App() {
         <Route path="/ar/:restaurantSlug" element={<MenuARPage />} />
         <Route path="/ar" element={<MenuARPage />} />
 
-        {/* Auth pages
-            FIX (double OTP): exact /sign-up redirects to /sign-up/ so that
-            the only matched route is /sign-up/* for ALL Clerk sub-paths
-            (/sign-up/verify-email-address etc.). This prevents unmount/remount
-            of <AuthPage> as Clerk navigates between steps, which was causing
-            a second OTP to be sent.
-        */}
-        <Route path="/sign-up" element={<Navigate to="/sign-up/" replace />} />
-        <Route path="/sign-up/*" element={<AuthPageGuard mode="sign-up" />} />
-        <Route path="/sign-in" element={<Navigate to="/sign-in/" replace />} />
-        <Route path="/sign-in/*" element={<AuthPageGuard mode="sign-in" />} />
-
-        {/* SSO / OAuth callback — Clerk redirects here after Google sign-in */}
-        <Route
-          path="/sso-callback"
-          element={
-            <div className="min-h-screen flex items-center justify-center bg-slate-50 font-poppins">
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-10 h-10 border-4 border-[#2563eb] border-t-transparent rounded-full animate-spin" />
-                <p className="text-slate-500 text-sm font-medium">Completing sign-in…</p>
-              </div>
-              <AuthenticateWithRedirectCallback />
-            </div>
-          }
-        />
+        {/* Auth pages */}
+        <Route path="/sign-up" element={<AuthPageGuard mode="sign-up" />} />
+        <Route path="/sign-in" element={<AuthPageGuard mode="sign-in" />} />
 
         {/* Onboarding (post-signup, pre-payment) */}
         <Route

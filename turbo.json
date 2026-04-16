@@ -8,6 +8,13 @@
       "outputs": [
         "dist/**",
         "build/**"
+      ],
+      "env": [
+        "VITE_API_URL",
+        "VITE_CLERK_PUBLISHABLE_KEY",
+        "VITE_RAZORPAY_KEY_ID",
+        "VITE_ADMIN_EMAILS",
+        "VITE_MINDAR_LICENSE"
       ]
     },
     "lint": {},

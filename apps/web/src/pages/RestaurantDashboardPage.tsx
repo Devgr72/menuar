@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useClerk } from '@clerk/react'
-import { useAuth } from '@clerk/react'
+import { signOut } from '../lib/auth-client'
 import { useDashboard } from '../hooks/useDashboard'
 import QRCodeDisplay from '../components/dashboard/QRCodeDisplay'
 import DishPhotoUploadModal from '../components/dashboard/DishPhotoUploadModal'
@@ -48,7 +47,6 @@ const STATUS_CONFIG = {
 // ─── Inline edit hook ─────────────────────────────────────────────────────────
 
 function useInlineEdit(initialOwner: string, initialRestaurant: string) {
-  const { getToken } = useAuth()
   const [editing, setEditing] = useState(false)
   const [ownerName, setOwnerName] = useState(initialOwner)
   const [restaurantName, setRestaurantName] = useState(initialRestaurant)
@@ -59,9 +57,7 @@ function useInlineEdit(initialOwner: string, initialRestaurant: string) {
     setSaving(true)
     setSaveError(null)
     try {
-      const token = await getToken()
-      if (!token) throw new Error('Not authenticated')
-      await updateProfile(token, {
+      await updateProfile({
         ownerName: ownerName.trim() !== initialOwner ? ownerName.trim() : undefined,
         restaurantName: restaurantName.trim() !== initialRestaurant ? restaurantName.trim() : undefined,
       })
@@ -169,7 +165,6 @@ function Sidebar({ active, navigate, signOut }: { active: string; navigate: (p: 
 
 export default function RestaurantDashboardPage() {
   const navigate = useNavigate()
-  const { signOut } = useClerk()
   const { data, loading, error, refetch } = useDashboard()
   const [selectedSlot, setSelectedSlot] = useState<DishSlot | null>(null)
 
