@@ -20,23 +20,26 @@ function devError(label: string, ...args: unknown[]) {
   if (IS_DEV) console.error(`%c[API] ${label}`, 'color:#ef4444;font-weight:bold', ...args)
 }
 
+// Session cookies are sent automatically via credentials:'include'.
+// Pass adminToken only for admin routes that use JWT Bearer auth.
 async function apiFetch<T>(
   path: string,
-  options?: RequestInit & { token?: string },
+  options?: RequestInit & { adminToken?: string },
 ): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(options?.token ? { Authorization: `Bearer ${options.token}` } : {}),
+    ...(options?.adminToken ? { Authorization: `Bearer ${options.adminToken}` } : {}),
   }
 
   const fullUrl = `${API_URL}${path}`
   const method = options?.method ?? 'GET'
-  devLog(`→ ${method} ${fullUrl}`, { hasToken: !!options?.token })
+  devLog(`→ ${method} ${fullUrl}`)
 
   let res: Response
   try {
     res = await fetch(fullUrl, {
       ...options,
+      credentials: 'include',
       headers: { ...headers, ...(options?.headers as Record<string, string>) },
     })
   } catch (networkErr) {
@@ -47,7 +50,6 @@ async function apiFetch<T>(
   devLog(`← ${res.status} ${res.statusText} ${fullUrl}`)
 
   if (!res.ok) {
-    // Read raw text first so we can log it even if it's not JSON
     const rawText = await res.text().catch(() => '')
     devWarn(`Error response body (${res.status}):`, rawText)
 
@@ -60,7 +62,6 @@ async function apiFetch<T>(
         url: fullUrl,
         preview: rawText.slice(0, 300),
       })
-      // Give a meaningful message based on status
       const statusMsg =
         res.status === 401 ? 'Not authenticated — please sign in again' :
         res.status === 403 ? 'Access denied' :
@@ -85,35 +86,33 @@ async function apiFetch<T>(
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export async function registerRestaurant(
-  token: string,
   data: { restaurantName: string; ownerName: string; email?: string },
 ) {
   return apiFetch('/api/v1/auth/register', {
     method: 'POST',
-    token,
     body: JSON.stringify(data),
   })
 }
 
-export async function getMe(token: string) {
+export async function getMe() {
   return apiFetch<{
     owner: { id: string; ownerName: string; email?: string; restaurantId: string } | null
     restaurant?: { id: string; name: string; slug: string; qrUrl?: string; scanCount: number; createdAt: string }
     subscription?: { id: string; status: string; activatedAt?: string } | null
-  }>('/api/v1/auth/me', { token })
+  }>('/api/v1/auth/me')
 }
 
 // ─── Subscription ─────────────────────────────────────────────────────────────
 
-export async function createSubscription(token: string): Promise<{
+export async function createSubscription(): Promise<{
   checkoutUrl: string
   razorpaySubId: string
   razorpayKeyId: string
 }> {
-  return apiFetch('/api/v1/subscription/create', { method: 'POST', token })
+  return apiFetch('/api/v1/subscription/create', { method: 'POST' })
 }
 
-export async function getSubscriptionStatus(token: string) {
+export async function getSubscriptionStatus() {
   return apiFetch<{
     subscription: {
       id: string
@@ -123,28 +122,25 @@ export async function getSubscriptionStatus(token: string) {
       haltedAt?: string
       amount: number
     } | null
-  }>('/api/v1/subscription/status', { token })
+  }>('/api/v1/subscription/status')
 }
 
 // ─── Restaurant dashboard ─────────────────────────────────────────────────────
 
-export async function getDashboard(token: string): Promise<DashboardResponse> {
-  return apiFetch('/api/v1/restaurant/dashboard', { token })
+export async function getDashboard(): Promise<DashboardResponse> {
+  return apiFetch('/api/v1/restaurant/dashboard')
 }
 
 export async function updateProfile(
-  token: string,
   data: { ownerName?: string; restaurantName?: string },
 ): Promise<{ ok: boolean }> {
   return apiFetch('/api/v1/restaurant/profile', {
     method: 'PATCH',
-    token,
     body: JSON.stringify(data),
   })
 }
 
 export async function uploadSlotPhotos(
-  token: string,
   slotNumber: number,
   anglePhotos: File[],
   meta?: { dishName?: string; description?: string; price?: string; isVeg?: string; menuPhoto?: File },
@@ -159,7 +155,7 @@ export async function uploadSlotPhotos(
 
   const res = await fetch(`${API_URL}/api/v1/restaurant/slots/${slotNumber}/photos`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: 'include',
     body: formData,
   })
 
@@ -171,10 +167,10 @@ export async function uploadSlotPhotos(
   return res.json()
 }
 
-// ─── Admin ────────────────────────────────────────────────────────────────────
+// ─── Admin (JWT Bearer auth — separate from user session) ─────────────────────
 
 export async function getAdminStats(token: string): Promise<AdminStats> {
-  return apiFetch('/api/v1/admin/stats', { token })
+  return apiFetch('/api/v1/admin/stats', { adminToken: token })
 }
 
 export async function getAdminRestaurants(
@@ -184,14 +180,14 @@ export async function getAdminRestaurants(
   const qs = new URLSearchParams()
   if (params?.status) qs.set('status', params.status)
   if (params?.page) qs.set('page', String(params.page))
-  return apiFetch(`/api/v1/admin/restaurants?${qs}`, { token })
+  return apiFetch(`/api/v1/admin/restaurants?${qs}`, { adminToken: token })
 }
 
 export async function getRestaurantSlots(
   token: string,
   restaurantId: string,
 ): Promise<{ slots: DishSlot[] }> {
-  return apiFetch(`/api/v1/admin/restaurants/${restaurantId}/slots`, { token })
+  return apiFetch(`/api/v1/admin/restaurants/${restaurantId}/slots`, { adminToken: token })
 }
 
 export async function uploadSlotGLB(
@@ -209,6 +205,7 @@ export async function uploadSlotGLB(
 
   const res = await fetch(`${API_URL}/api/v1/admin/slots/${slotId}/glb`, {
     method: 'POST',
+    credentials: 'include',
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
   })
@@ -228,13 +225,13 @@ export async function updateSlotMeta(
 ) {
   return apiFetch(`/api/v1/admin/slots/${slotId}`, {
     method: 'PUT',
-    token,
+    adminToken: token,
     body: JSON.stringify(data),
   })
 }
 
 export async function getAdminEvents(token: string) {
-  return apiFetch<{ events: unknown[] }>('/api/v1/admin/events', { token })
+  return apiFetch<{ events: unknown[] }>('/api/v1/admin/events', { adminToken: token })
 }
 
 export async function recordQRScan(restaurantSlug: string): Promise<void> {

@@ -1,8 +1,7 @@
 import { Router } from 'express';
-import { getAuth } from '@clerk/express';
 import { z } from 'zod';
 import { PrismaClient, Prisma } from '@prisma/client';
-import { requireClerkAuth } from '../middleware/clerkAuth';
+import { requireAuth } from '../middleware/auth';
 
 const IS_DEV = process.env.NODE_ENV !== 'production';
 function log(step: string, data?: unknown) {
@@ -38,8 +37,8 @@ async function generateSlug(name: string): Promise<string> {
 }
 
 /** POST /api/v1/auth/register — create restaurant + owner + 10 dish slots */
-router.post('/register', requireClerkAuth, async (req, res) => {
-  const { userId } = getAuth(req);
+router.post('/register', requireAuth, async (req, res) => {
+  const userId = res.locals.userId as string;
   if (!userId) {
     res.status(401).json({ error: 'Unauthorized', code: 'AUTH_REQUIRED' });
     return;
@@ -54,7 +53,7 @@ router.post('/register', requireClerkAuth, async (req, res) => {
   const { restaurantName, ownerName, email } = parsed.data;
 
   // Check if owner already registered
-  const existing = await prisma.restaurantOwner.findUnique({ where: { clerkUserId: userId } });
+  const existing = await prisma.restaurantOwner.findUnique({ where: { userId: userId } });
   if (existing) {
     res.status(409).json({ error: 'Restaurant already registered for this account', code: 'ALREADY_REGISTERED' });
     return;
@@ -69,7 +68,7 @@ router.post('/register', requireClerkAuth, async (req, res) => {
       });
 
       const owner = await tx.restaurantOwner.create({
-        data: { clerkUserId: userId, ownerName, email, restaurantId: restaurant.id },
+        data: { userId: userId, ownerName, email, restaurantId: restaurant.id },
       });
 
       // Create 10 dish slots
@@ -96,15 +95,15 @@ router.post('/register', requireClerkAuth, async (req, res) => {
 });
 
 /** GET /api/v1/auth/me — get current user's restaurant info */
-router.get('/me', requireClerkAuth, async (req, res) => {
-  const { userId } = getAuth(req);
+router.get('/me', requireAuth, async (req, res) => {
+  const userId = res.locals.userId as string;
   if (!userId) {
     res.status(401).json({ error: 'Unauthorized', code: 'AUTH_REQUIRED' });
     return;
   }
 
   const owner = await prisma.restaurantOwner.findUnique({
-    where: { clerkUserId: userId },
+    where: { userId: userId },
     include: {
       restaurant: {
         include: { subscription: true },

@@ -1,14 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { ClerkProvider } from '@clerk/react'
 import App from './App.tsx'
 import './index.css'
-
-const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
-
-if (!publishableKey && import.meta.env.MODE !== 'development') {
-  throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY')
-}
 
 // ── Error Boundary ──────────────────────────────────────────────────────────
 interface EBState { error: Error | null }
@@ -51,16 +44,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, EBSta
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <ClerkProvider
-        publishableKey={publishableKey ?? ""}
-        signInUrl="/sign-in"
-        signUpUrl="/sign-up"
-        signInFallbackRedirectUrl="/"
-        signUpFallbackRedirectUrl="/onboarding"
-        afterSignOutUrl="/sign-in"
-      >
-        <App />
-      </ClerkProvider>
+      <App />
     </ErrorBoundary>
   </React.StrictMode>
 )

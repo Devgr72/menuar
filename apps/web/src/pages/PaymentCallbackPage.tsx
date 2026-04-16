@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@clerk/react'
 import { getSubscriptionStatus, createSubscription } from '../api/client'
 
 type State = 'loading' | 'success' | 'pending' | 'halted' | 'error'
@@ -10,7 +9,6 @@ const API_URL = import.meta.env.VITE_API_URL || ''
 
 export default function PaymentCallbackPage() {
   const navigate = useNavigate()
-  const { getToken } = useAuth()
   const [state, setState] = useState<State>('loading')
   const [retrying, setRetrying] = useState(false)
   const [dots, setDots] = useState('.')
@@ -32,9 +30,8 @@ export default function PaymentCallbackPage() {
         await new Promise((r) => setTimeout(r, 2000))
         attempts++
         try {
-          const token = await getToken()
-          if (!token || cancelled) return
-          const { subscription } = await getSubscriptionStatus(token)
+          if (cancelled) return
+          const { subscription } = await getSubscriptionStatus()
           if (!subscription) continue
 
           if (subscription.status === 'active') {
@@ -55,14 +52,12 @@ export default function PaymentCallbackPage() {
 
     poll()
     return () => { cancelled = true }
-  }, [getToken, navigate])
+  }, [navigate])
 
   async function handleRetry() {
     setRetrying(true)
     try {
-      const token = await getToken()
-      if (!token) return
-      const { checkoutUrl } = await createSubscription(token)
+      const { checkoutUrl } = await createSubscription()
       window.location.href = checkoutUrl
     } catch {
       setRetrying(false)
@@ -72,11 +67,9 @@ export default function PaymentCallbackPage() {
   // Dev-only: manually activate (no webhook in local dev)
   async function handleDevActivate() {
     try {
-      const token = await getToken()
-      if (!token) return
       const res = await fetch(`${API_URL}/api/v1/dev/activate`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       })
       if (res.ok) {
         setState('success')

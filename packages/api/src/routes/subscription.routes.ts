@@ -1,7 +1,6 @@
 import { Router } from 'express';
-import { getAuth } from '@clerk/express';
 import { PrismaClient } from '@prisma/client';
-import { requireClerkAuth } from '../middleware/clerkAuth';
+import { requireAuth } from '../middleware/auth';
 import {
   ensureMonthlyPlan,
   createRazorpaySubscription,
@@ -25,19 +24,15 @@ function logError(step: string, err: unknown) {
 }
 
 /** POST /api/v1/subscription/create — create Razorpay subscription for current restaurant */
-router.post('/create', requireClerkAuth, async (req, res) => {
-  const { userId } = getAuth(req);
-  if (!userId) {
-    res.status(401).json({ error: 'Unauthorized', code: 'AUTH_REQUIRED' });
-    return;
-  }
+router.post('/create', requireAuth, async (req, res) => {
+  const userId = res.locals.userId as string;
 
   log('Create subscription request', { userId });
 
   // Step 1: Look up restaurant owner
   log('Step 1: Looking up restaurantOwner for userId', userId);
   const owner = await prisma.restaurantOwner.findUnique({
-    where: { clerkUserId: userId },
+    where: { userId: userId },
     include: { restaurant: { include: { subscription: true } } },
   }).catch((err) => {
     logError('Prisma lookup failed', err);
@@ -136,15 +131,11 @@ router.post('/create', requireClerkAuth, async (req, res) => {
 });
 
 /** GET /api/v1/subscription/status — get current subscription status */
-router.get('/status', requireClerkAuth, async (req, res) => {
-  const { userId } = getAuth(req);
-  if (!userId) {
-    res.status(401).json({ error: 'Unauthorized', code: 'AUTH_REQUIRED' });
-    return;
-  }
+router.get('/status', requireAuth, async (req, res) => {
+  const userId = res.locals.userId as string;
 
   const owner = await prisma.restaurantOwner.findUnique({
-    where: { clerkUserId: userId },
+    where: { userId: userId },
     include: { restaurant: { include: { subscription: true } } },
   });
 

@@ -1,8 +1,7 @@
 import { Router } from 'express';
-import { getAuth } from '@clerk/express';
 import multer from 'multer';
 import { PrismaClient } from '@prisma/client';
-import { requireClerkAuth } from '../middleware/clerkAuth';
+import { requireAuth } from '../middleware/auth';
 import { saveFile } from '../services/storage.service';
 
 const router = Router();
@@ -21,16 +20,12 @@ const upload = multer({
 });
 
 /** GET /api/v1/restaurant/dashboard */
-router.get('/dashboard', requireClerkAuth, async (req, res) => {
-  const { userId } = getAuth(req);
-  if (!userId) {
-    res.status(401).json({ error: 'Unauthorized', code: 'AUTH_REQUIRED' });
-    return;
-  }
+router.get('/dashboard', requireAuth, async (req, res) => {
+  const userId = res.locals.userId as string;
 
   try {
     const owner = await prisma.restaurantOwner.findUnique({
-      where: { clerkUserId: userId },
+      where: { userId: userId },
       include: {
         restaurant: {
           include: {
@@ -82,12 +77,8 @@ router.get('/dashboard', requireClerkAuth, async (req, res) => {
 });
 
 /** PATCH /api/v1/restaurant/profile — update owner name and/or restaurant name */
-router.patch('/profile', requireClerkAuth, async (req, res) => {
-  const { userId } = getAuth(req);
-  if (!userId) {
-    res.status(401).json({ error: 'Unauthorized', code: 'AUTH_REQUIRED' });
-    return;
-  }
+router.patch('/profile', requireAuth, async (req, res) => {
+  const userId = res.locals.userId as string;
 
   const { ownerName, restaurantName } = req.body as { ownerName?: string; restaurantName?: string };
   if (!ownerName?.trim() && !restaurantName?.trim()) {
@@ -95,7 +86,7 @@ router.patch('/profile', requireClerkAuth, async (req, res) => {
     return;
   }
 
-  const owner = await prisma.restaurantOwner.findUnique({ where: { clerkUserId: userId } });
+  const owner = await prisma.restaurantOwner.findUnique({ where: { userId: userId } });
   if (!owner) {
     res.status(404).json({ error: 'Not registered', code: 'NOT_REGISTERED' });
     return;
@@ -114,14 +105,10 @@ router.patch('/profile', requireClerkAuth, async (req, res) => {
 });
 
 /** GET /api/v1/restaurant/slots */
-router.get('/slots', requireClerkAuth, async (req, res) => {
-  const { userId } = getAuth(req);
-  if (!userId) {
-    res.status(401).json({ error: 'Unauthorized', code: 'AUTH_REQUIRED' });
-    return;
-  }
+router.get('/slots', requireAuth, async (req, res) => {
+  const userId = res.locals.userId as string;
 
-  const owner = await prisma.restaurantOwner.findUnique({ where: { clerkUserId: userId } });
+  const owner = await prisma.restaurantOwner.findUnique({ where: { userId: userId } });
   if (!owner) {
     res.status(404).json({ error: 'Not registered', code: 'NOT_REGISTERED' });
     return;
@@ -143,17 +130,13 @@ router.get('/slots', requireClerkAuth, async (req, res) => {
  */
 router.post(
   '/slots/:slotNumber/photos',
-  requireClerkAuth,
+  requireAuth,
   upload.fields([
     { name: 'menuPhoto', maxCount: 1 },
     { name: 'photos', maxCount: 4 },
   ]),
   async (req, res) => {
-    const { userId } = getAuth(req);
-    if (!userId) {
-      res.status(401).json({ error: 'Unauthorized', code: 'AUTH_REQUIRED' });
-      return;
-    }
+    const userId = res.locals.userId as string;
 
     const slotNumber = parseInt(req.params.slotNumber, 10);
     if (isNaN(slotNumber) || slotNumber < 1 || slotNumber > 10) {
@@ -171,7 +154,7 @@ router.post(
     }
 
     const owner = await prisma.restaurantOwner.findUnique({
-      where: { clerkUserId: userId },
+      where: { userId: userId },
       include: { restaurant: { include: { subscription: true } } },
     });
 

@@ -2,15 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import dotenv from 'dotenv';
-import { clerkMiddleware } from '@clerk/express';
+import { auth } from './lib/auth';
+import { toNodeHandler } from 'better-auth/node';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-
-// Clerk must be applied before any route that needs auth
-app.use(clerkMiddleware());
 
 // Allow both http and https localhost in dev; use WEB_URL in production
 const allowedOrigins = process.env.NODE_ENV === 'production'
@@ -26,6 +24,10 @@ app.use(cors({
   },
   credentials: true,
 }));
+
+// Better Auth handles all /api/auth/* routes (sign-in, sign-up, OAuth, sign-out)
+// Must be mounted BEFORE express.json() as it reads raw body internally
+app.all('/api/auth/*', toNodeHandler(auth));
 
 // Raw body for Razorpay webhook signature verification — mount BEFORE express.json()
 app.use(

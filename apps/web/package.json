@@ -10,8 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@clerk/react": "^6.2.1",
     "@menuar/types": "*",
+    "better-auth": "^1.6.5",
     "mind-ar": "^1.2.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

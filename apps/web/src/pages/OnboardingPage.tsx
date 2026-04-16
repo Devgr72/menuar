@@ -1,15 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth, useUser } from '@clerk/react'
+import { useSession } from '../lib/auth-client'
 import { registerRestaurant } from '../api/client'
 
 export default function OnboardingPage() {
   const navigate = useNavigate()
-  const { getToken } = useAuth()
-  const { user } = useUser()
+  const { data: session } = useSession()
 
   const [form, setForm] = useState({
-    ownerName: user?.fullName ?? '',
+    ownerName: session?.user?.name ?? '',
     restaurantName: '',
   })
   const [loading, setLoading] = useState(false)
@@ -21,13 +20,10 @@ export default function OnboardingPage() {
     setError(null)
 
     try {
-      const token = await getToken()
-      if (!token) throw new Error('Not authenticated')
-
-      await registerRestaurant(token, {
+      await registerRestaurant({
         ownerName: form.ownerName,
         restaurantName: form.restaurantName,
-        email: user?.primaryEmailAddress?.emailAddress,
+        email: session?.user?.email,
       })
 
       navigate('/select-plan', { replace: true })
@@ -183,7 +179,7 @@ export default function OnboardingPage() {
           <p className="text-center text-slate-400 text-xs mt-5">
             Signed in as{' '}
             <span className="text-slate-600 font-medium">
-              {user?.primaryEmailAddress?.emailAddress}
+              {session?.user?.email}
             </span>
           </p>
         </div>
