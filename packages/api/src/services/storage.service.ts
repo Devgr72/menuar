@@ -12,7 +12,7 @@ const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
   fs.mkdirSync(path.join(UPLOADS_DIR, sub), { recursive: true });
 });
 
-const SERVER_URL = process.env.SERVER_URL ?? `http://localhost:${process.env.PORT ?? 3001}`;
+const API_URL = process.env.API_URL ?? `http://localhost:${process.env.PORT ?? 3001}`;
 
 /**
  * Save a file to local disk or R2.
@@ -39,7 +39,7 @@ export async function saveFile(
   fs.writeFileSync(filePath, buffer);
   return {
     key,
-    url: `${SERVER_URL}/uploads/${key}`,
+    url: `${API_URL}/uploads/${key}`,
   };
 }
 

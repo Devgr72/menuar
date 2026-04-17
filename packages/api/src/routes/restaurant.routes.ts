@@ -41,24 +41,25 @@ router.get('/dashboard', requireAuth, async (req, res) => {
       return;
     }
 
+const resOwner = owner as any;
     res.json({
       owner: {
-        id: owner.id,
-        ownerName: owner.ownerName,
-        email: owner.email,
-        restaurantId: owner.restaurantId,
-        createdAt: owner.createdAt,
+        id: resOwner.id,
+        ownerName: resOwner.ownerName,
+        email: resOwner.email,
+        restaurantId: resOwner.restaurantId,
+        createdAt: resOwner.createdAt,
       },
       restaurant: {
-        id: owner.restaurant.id,
-        name: owner.restaurant.name,
-        slug: owner.restaurant.slug,
-        plan: owner.restaurant.plan,
-        qrUrl: owner.restaurant.qrUrl,
-        scanCount: owner.restaurant.scanCount,
-        createdAt: owner.restaurant.createdAt,
+        id: resOwner.restaurant.id,
+        name: resOwner.restaurant.name,
+        slug: resOwner.restaurant.slug,
+        plan: resOwner.restaurant.plan,
+        qrUrl: resOwner.restaurant.qrUrl,
+        scanCount: resOwner.restaurant.scanCount,
+        createdAt: resOwner.restaurant.createdAt,
       },
-      subscription: owner.restaurant.subscription
+      subscription: resOwner.restaurant.subscription
         ? {
             id: owner.restaurant.subscription.id,
             status: owner.restaurant.subscription.status,
@@ -163,7 +164,8 @@ router.post(
       return;
     }
 
-    if (owner.restaurant.subscription?.status !== 'active') {
+    const resOwner = owner as any;
+    if (resOwner.restaurant.subscription?.status !== 'active') {
       res.status(403).json({ error: 'Active subscription required', code: 'NO_SUBSCRIPTION' });
       return;
     }

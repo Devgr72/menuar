@@ -129,7 +129,7 @@ router.get('/restaurants/:restaurantId/slots', requireAdminAuth, async (req, res
   const isR2 = process.env.USE_R2 === 'true';
   const baseUrl = isR2
     ? (process.env.R2_PUBLIC_URL || '').replace(/\/$/, '')
-    : (process.env.SERVER_URL || `http://localhost:${process.env.PORT ?? 3001}`);
+    : (process.env.API_URL || `http://localhost:${process.env.PORT ?? 3001}`);
   const slotsWithUrls = slots.map((slot) => ({
     ...slot,
     photoUrls: slot.photoKeys.map((k) => isR2 ? `${baseUrl}/${k}` : `${baseUrl}/uploads/${k}`),
@@ -222,8 +222,8 @@ router.post('/restaurants/:restaurantId/regenerate-qr', requireAdminAuth, async 
     return;
   }
 
-  const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
-  const arUrl = `${BASE_URL}/ar/${restaurant.slug}`;
+  const WEB_URL = process.env.WEB_URL || 'http://localhost:3000';
+  const arUrl = `${WEB_URL}/ar/${restaurant.slug}`;
 
   const QRCode = (await import('qrcode')).default;
   const qrBuffer = await QRCode.toBuffer(arUrl, { width: 512, margin: 2, color: { dark: '#1a1a1a', light: '#ffffff' } });

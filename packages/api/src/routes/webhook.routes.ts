@@ -7,7 +7,7 @@ import { saveFile } from '../services/storage.service';
 const router = Router();
 const prisma = new PrismaClient();
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+const WEB_URL = process.env.WEB_URL || 'http://localhost:3000';
 
 /** POST /api/v1/webhook/razorpay — Razorpay sends all subscription events here */
 // Note: raw body needed for signature verification — mounted with express.raw() in index.ts
@@ -175,7 +175,7 @@ router.post('/razorpay', async (req, res) => {
 });
 
 async function generateAndStoreQR(restaurantId: string, slug: string): Promise<void> {
-  const qrUrl = `${BASE_URL}/ar/${slug}`;
+  const qrUrl = `${WEB_URL}/ar/${slug}`;
   const qrBuffer = await QRCode.toBuffer(qrUrl, {
     errorCorrectionLevel: 'H',
     width: 400,
