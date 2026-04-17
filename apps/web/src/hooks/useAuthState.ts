@@ -27,6 +27,16 @@ export function useAuthState(): AuthState {
     return () => { mountedRef.current = false }
   }, [])
 
+  // Safety timeout — if session check hangs >6s, treat as unauthenticated
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (mountedRef.current && status === 'loading') {
+        setStatus('unauthenticated')
+      }
+    }, 6000)
+    return () => clearTimeout(t)
+  }, [status])
+
   useEffect(() => {
     if (isPending) return
 

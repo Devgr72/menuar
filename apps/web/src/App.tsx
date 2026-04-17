@@ -1,4 +1,26 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+
+function LoadingScreen() {
+  return (
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#07090f',
+    }}>
+      <div style={{
+        width: 36,
+        height: 36,
+        border: '3px solid rgba(107,60,255,0.2)',
+        borderTop: '3px solid #6b3cff',
+        borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite',
+      }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+    </div>
+  )
+}
 import MenuARPage from './pages/MenuARPage'
 import AuthPage from './pages/AuthPage'
 import OnboardingPage from './pages/OnboardingPage'
@@ -14,7 +36,7 @@ import { useAuthState } from './hooks/useAuthState'
  */
 function RootRedirect() {
   const { status } = useAuthState()
-  if (status === 'loading') return null
+  if (status === 'loading') return <LoadingScreen />
   if (status === 'unauthenticated')   return <Navigate to="/sign-in" replace />
   if (status === 'needs_onboarding')  return <Navigate to="/onboarding" replace />
   if (status === 'needs_payment')     return <Navigate to="/select-plan" replace />
@@ -27,7 +49,7 @@ function RootRedirect() {
  */
 function AuthPageGuard({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   const { status } = useAuthState()
-  if (status === 'loading') return null
+  if (status === 'loading') return <LoadingScreen />
   if (status === 'active')           return <Navigate to="/dashboard" replace />
   if (status === 'needs_payment')    return <Navigate to="/select-plan" replace />
   if (status === 'needs_onboarding') return <Navigate to="/onboarding" replace />

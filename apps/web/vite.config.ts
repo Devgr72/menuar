@@ -20,13 +20,20 @@ export default defineConfig({
     host: true,   // expose to network so phone can connect via local IP
     https: loadCerts(),
     proxy: {
-      '/api': {
-        target: 'https://menuar-mnmd.onrender.com',
+      // Better Auth routes always go to local API
+      '/api/auth': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+      },
+      // App API routes go to local API
+      '/api/v1': {
+        target: 'http://localhost:3001',
         changeOrigin: true,
         secure: false,
       },
       '/uploads': {
-        target: 'https://menuar-mnmd.onrender.com',
+        target: 'http://localhost:3001',
         changeOrigin: true,
         secure: false,
       },
