@@ -3,18 +3,21 @@
   "outputDirectory": "dist",
   "installCommand": "npm install --ignore-scripts",
   "framework": null,
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "https://menuar-2.onrender.com/api/$1"
+      "src": "/api/(.*)",
+      "dest": "https://menuar-2.onrender.com/api/$1"
     },
     {
-      "source": "/uploads/(.*)",
-      "destination": "https://menuar-2.onrender.com/uploads/$1"
+      "src": "/uploads/(.*)",
+      "dest": "https://menuar-2.onrender.com/uploads/$1"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
