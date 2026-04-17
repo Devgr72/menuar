@@ -5,12 +5,8 @@
   "framework": null,
   "rewrites": [
     {
-      "source": "/api/auth/:path*",
-      "destination": "https://menuar-2.onrender.com/api/auth/:path*"
-    },
-    {
-      "source": "/api/v1/:path*",
-      "destination": "https://menuar-2.onrender.com/api/v1/:path*"
+      "source": "/api/:path*",
+      "destination": "https://menuar-2.onrender.com/api/:path*"
     },
     {
       "source": "/uploads/:path*",
