@@ -8,7 +8,7 @@ const prisma = new PrismaClient()
 export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
   secret: process.env.BETTER_AUTH_SECRET!,
-  baseURL: `${process.env.API_URL || 'http://localhost:3000'}/api/auth`,
+  baseURL: `${process.env.WEB_URL || 'https://menuar-web.vercel.app'}/api/auth`,
 
   emailAndPassword: { enabled: true },
 
@@ -41,7 +41,7 @@ export const auth = betterAuth({
   },
 
   trustedOrigins: [
-    process.env.WEB_URL || 'http://localhost:3000',
+    process.env.WEB_URL || 'https://menuar-web.vercel.app',
     'https://menuar-web.vercel.app',
     'http://localhost:3000',
     'https://localhost:3000',

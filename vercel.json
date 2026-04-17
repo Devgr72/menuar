@@ -4,6 +4,18 @@
   "installCommand": "npm install --ignore-scripts",
   "framework": null,
   "rewrites": [
+    {
+      "source": "/api/auth/:path*",
+      "destination": "https://menuar-2.onrender.com/api/auth/:path*"
+    },
+    {
+      "source": "/api/v1/:path*",
+      "destination": "https://menuar-2.onrender.com/api/v1/:path*"
+    },
+    {
+      "source": "/uploads/:path*",
+      "destination": "https://menuar-2.onrender.com/uploads/:path*"
+    },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
