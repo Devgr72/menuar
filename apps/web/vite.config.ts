@@ -23,12 +23,12 @@ export default defineConfig({
       '/api': {
         target: 'https://menuar-mnmd.onrender.com',
         changeOrigin: true,
-        secure: true,
+        secure: false,
       },
       '/uploads': {
         target: 'https://menuar-mnmd.onrender.com',
         changeOrigin: true,
-        secure: true,
+        secure: false,
       },
     },
   },

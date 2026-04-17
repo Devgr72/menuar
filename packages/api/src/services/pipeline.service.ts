@@ -107,7 +107,7 @@ async function processPendingTask(dishId: string, meta: TaskMeta): Promise<void>
   pendingTasks.delete(dishId);
 
   if (!result.success) {
-    console.error(`[poller] dish=${dishId} failed: ${result.error}`);
+    console.error(`[poller] dish=${dishId} failed: ${(result as any).error}`);
     await prisma.dish.update({ where: { id: dishId }, data: { modelStatus: ModelStatus.failed } });
     return;
   }

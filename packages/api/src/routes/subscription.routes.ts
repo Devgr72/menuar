@@ -10,7 +10,7 @@ import {
 import QRCode from 'qrcode';
 import { saveFile } from '../services/storage.service';
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+const WEB_URL = process.env.WEB_URL || 'http://localhost:3000';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -48,17 +48,18 @@ router.post('/create', requireAuth, async (req, res) => {
     return;
   }
 
+  const resOwner = owner as any;
   log('Step 1 ✓ Owner found', {
-    ownerId: owner.id,
-    restaurantId: owner.restaurantId,
-    restaurantName: owner.restaurant.name,
-    existingSubscription: owner.restaurant.subscription
-      ? { status: owner.restaurant.subscription.status, id: owner.restaurant.subscription.id }
+    ownerId: resOwner.id,
+    restaurantId: resOwner.restaurantId,
+    restaurantName: resOwner.restaurant.name,
+    existingSubscription: resOwner.restaurant.subscription
+      ? { status: resOwner.restaurant.subscription.status, id: resOwner.restaurant.subscription.id }
       : null,
   });
 
   // Step 2: Check for existing active subscription
-  if (owner.restaurant.subscription?.status === 'active') {
+  if (resOwner.restaurant.subscription?.status === 'active') {
     log('Already subscribed — returning 409');
     res.status(409).json({ error: 'Already subscribed', code: 'ALREADY_SUBSCRIBED' });
     return;
@@ -93,8 +94,8 @@ router.post('/create', requireAuth, async (req, res) => {
 
     const { razorpaySubId, checkoutUrl, amount } = await createRazorpaySubscription(
       planId,
-      owner.restaurant.name,
-      owner.email ?? undefined,
+      resOwner.restaurant.name,
+      resOwner.email ?? undefined,
     );
     log('Step 3 ✓ Razorpay subscription created', { razorpaySubId, checkoutUrl, amount });
 
@@ -145,13 +146,14 @@ router.get('/status', requireAuth, async (req, res) => {
     return;
   }
 
-  if (!owner.restaurant.subscription) {
+  const resOwner = owner as any;
+  if (!resOwner.restaurant.subscription) {
     log('Status: owner exists but no subscription yet', { userId });
     res.json({ subscription: null });
     return;
   }
 
-  let sub = owner.restaurant.subscription;
+  let sub = resOwner.restaurant.subscription;
 
   // Fallback sync for local development where Razorpay webhooks cannot reach localhost
   if (sub.status === 'pending') {
@@ -177,8 +179,8 @@ router.get('/status', requireAuth, async (req, res) => {
         });
 
         // Generate QR code if missing
-        if (!owner.restaurant.qrUrl) {
-          const qrBuffer = await QRCode.toBuffer(`${BASE_URL}/ar/${owner.restaurant.slug}`, {
+        if (!resOwner.restaurant.qrUrl) {
+          const qrBuffer = await QRCode.toBuffer(`${WEB_URL}/ar/${resOwner.restaurant.slug}`, {
             errorCorrectionLevel: 'H',
             width: 400,
             margin: 2,

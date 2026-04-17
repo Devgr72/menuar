@@ -10,7 +10,7 @@ import { saveFile } from '../services/storage.service';
 
 const router = Router();
 const prisma = new PrismaClient();
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+const WEB_URL = process.env.WEB_URL || 'http://localhost:3000';
 
 /**
  * POST /api/v1/dev/activate
@@ -48,7 +48,7 @@ router.post('/activate', requireAuth, async (req, res) => {
   // Generate QR code if not already done
   if (!owner.restaurant.qrUrl) {
     try {
-      const qrBuffer = await QRCode.toBuffer(`${BASE_URL}/ar/${owner.restaurant.slug}`, {
+      const qrBuffer = await QRCode.toBuffer(`${WEB_URL}/ar/${owner.restaurant.slug}`, {
         errorCorrectionLevel: 'H',
         width: 400,
         margin: 2,

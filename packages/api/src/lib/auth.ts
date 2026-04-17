@@ -41,13 +41,14 @@ export const auth = betterAuth({
   },
 
   trustedOrigins: [
-    process.env.WEB_URL || 'http://localhost:3000',
+    process.env.WEB_URL || 'https://menuar-web.vercel.app',
+    'https://menuar-web.vercel.app',
     'http://localhost:3000',
     'https://localhost:3000',
   ],
 
   advanced: {
-    crossSubDomainCookies: { enabled: false },
+    crossSubDomainCookies: { enabled: true },
     cookiePrefix: 'dishdekho',
   },
 })
