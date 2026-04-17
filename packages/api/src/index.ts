@@ -12,8 +12,8 @@ const PORT = process.env.PORT || 3001;
 
 // Allow both http and https localhost in dev; use WEB_URL in production
 const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? [process.env.WEB_URL].filter(Boolean) as string[]
-  : ['http://localhost:3000', 'https://localhost:3000', 'http://localhost:3002', process.env.WEB_URL].filter(Boolean) as string[];
+  ? [process.env.WEB_URL, 'https://menuar-web.vercel.app'].filter(Boolean) as string[]
+  : ['http://localhost:3000', 'https://localhost:3000', 'http://localhost:3002', 'https://menuar-web.vercel.app', process.env.WEB_URL].filter(Boolean) as string[];
 
 app.use(cors({
   origin: (origin, cb) => {
