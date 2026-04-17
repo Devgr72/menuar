@@ -64,14 +64,61 @@ export default function AuthPage({ mode }: Props) {
     }
   }
 
+  useEffect(() => {
+    // @ts-ignore
+    const google = window.google;
+    if (google) {
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "902871579568-pjjo2k4oqojd1gcmnm471audgtggfle6.apps.googleusercontent.com";
+      console.log("Initializing Google with Client ID:", clientId);
+      google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleGoogleResponse,
+      });
+    }
+  }, []);
+
+  async function handleGoogleResponse(response: any) {
+    setFormLoading(true);
+    setFormError(null);
+    console.log("Google response received, verifying with Better Auth...");
+    try {
+      const result = await signIn.social({
+        provider: "google",
+        idToken: {
+          token: response.credential
+        },
+        callbackURL: "/",
+      });
+      
+      console.log("Better Auth Result:", result);
+
+      if (result.error) {
+        throw new Error(result.error.message ?? "Google authentication failed");
+      }
+      
+      setFormSuccess("✅ Signed in with Google! Redirecting…");
+      setIsRedirecting(true);
+      
+      // Force full page reload to ensure session cookies are picked up
+      setTimeout(() => {
+        console.log("Redirecting to app...");
+        window.location.href = "/";
+      }, 1200);
+    } catch (err) {
+      console.error("Auth Error:", err);
+      setFormError(err instanceof Error ? err.message : "Google sign-in failed");
+      setFormLoading(false);
+    }
+  }
+
   async function handleGoogle() {
     setFormError(null);
-    setFormLoading(true);
-    try {
-      await signIn.social({ provider: "google", callbackURL: "/" });
-    } catch {
-      setFormError("Google sign-in is currently unavailable. Please use email & password.");
-      setFormLoading(false);
+    // @ts-ignore
+    if (window.google) {
+      // @ts-ignore
+      window.google.accounts.id.prompt();
+    } else {
+      setFormError("Google services are still loading. Please try again in a moment.");
     }
   }
 
@@ -349,14 +396,12 @@ export default function AuthPage({ mode }: Props) {
                 <div className="flex-1 h-px bg-white/[0.05]" />
               </div>
 
-              {/* Google button — shows locked state since OAuth not configured */}
               <div className="relative group">
                 <button
                   type="button"
                   onClick={handleGoogle}
                   disabled={isDisabled}
-                  className="google-btn w-full h-14 rounded-xl border border-white/[0.07] bg-white/[0.03] hover:bg-white/[0.06] text-white/60 font-semibold text-[14px] transition-all duration-300 disabled:opacity-40 flex items-center justify-center gap-3 cursor-not-allowed"
-                  title="Google sign-in is currently unavailable"
+                  className="google-btn w-full h-14 rounded-xl border border-white/[0.07] bg-white/[0.03] hover:bg-white/[0.06] text-white/60 font-semibold text-[14px] transition-all duration-300 disabled:opacity-40 flex items-center justify-center gap-3"
                 >
                   <svg className="w-5 h-5 opacity-60" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -365,11 +410,7 @@ export default function AuthPage({ mode }: Props) {
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                   </svg>
                   Continue with Google
-                  <span className="ml-auto text-[10px] bg-white/5 px-2 py-0.5 rounded-md text-white/30 font-bold uppercase tracking-wider">Soon</span>
                 </button>
-                <div className="absolute -bottom-5 left-0 right-0 text-center text-[10px] text-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  Google OAuth not configured yet
-                </div>
               </div>
             </div>
 

@@ -1,11 +1,11 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
-import dotenv from 'dotenv';
 import { auth } from './lib/auth';
 import { toNodeHandler } from 'better-auth/node';
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;

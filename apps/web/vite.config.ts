@@ -21,14 +21,14 @@ export default defineConfig({
     https: loadCerts(),
     proxy: {
       '/api': {
-        target: 'https://menuar-mnmd.onrender.com',
+        target: 'http://localhost:3001',
         changeOrigin: true,
-        secure: true,
+        secure: false,
       },
       '/uploads': {
-        target: 'https://menuar-mnmd.onrender.com',
+        target: 'http://localhost:3001',
         changeOrigin: true,
-        secure: true,
+        secure: false,
       },
     },
   },
