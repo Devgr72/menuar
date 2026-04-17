@@ -16,6 +16,9 @@
       "source": "/uploads/:path*",
       "destination": "https://menuar-2.onrender.com/uploads/:path*"
     },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/((?!api/|uploads/).*)",
+      "destination": "/index.html"
+    }
   ]
 }
