@@ -48,14 +48,14 @@ export default function AuthPage({ mode }: Props) {
         if (error) throw new Error(error.message ?? "Sign up failed");
         setFormSuccess("🎉 Account created! Setting up your workspace…");
         setIsRedirecting(true);
-        // Give the session time to propagate, then redirect
-        setTimeout(() => navigate("/onboarding", { replace: true }), 1800);
+        // Give the session time to propagate, then redirect via full reload
+        setTimeout(() => { window.location.href = "/onboarding"; }, 1800);
       } else {
         const { error } = await signIn.email({ email, password });
         if (error) throw new Error(error.message ?? "Invalid email or password");
         setFormSuccess("✅ Signed in successfully! Redirecting…");
         setIsRedirecting(true);
-        setTimeout(() => navigate("/", { replace: true }), 1200);
+        setTimeout(() => { window.location.href = "/"; }, 1200);
       }
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Authentication failed");
