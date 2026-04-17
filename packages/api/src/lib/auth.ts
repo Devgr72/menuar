@@ -48,6 +48,7 @@ export const auth = betterAuth({
   ],
 
   advanced: {
+    trustHost: true,
     crossSubDomainCookies: { enabled: true },
     cookiePrefix: 'dishdekho',
   },
