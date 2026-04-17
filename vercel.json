@@ -1,7 +1,7 @@
 {
-  "buildCommand": "npx turbo run build --filter=@menuar/web",
-  "outputDirectory": "apps/web/dist",
-  "installCommand": "npm install --ignore-scripts",
+  "buildCommand": "npx turbo run build --filter=@menuar/web && cp -r apps/web/dist ./dist",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
