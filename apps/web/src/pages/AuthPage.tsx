@@ -55,7 +55,22 @@ export default function AuthPage({ mode }: Props) {
         if (error) throw new Error(error.message ?? "Invalid email or password");
         setFormSuccess("✅ Signed in successfully! Redirecting…");
         setIsRedirecting(true);
-        setTimeout(() => { window.location.href = "/"; }, 1200);
+        
+        try {
+          const { getMe } = await import('../api/client');
+          const { owner, subscription } = await getMe();
+          if (!owner) {
+            window.location.href = "/onboarding";
+          } else if (subscription?.status === 'active') {
+            window.location.href = "/dashboard";
+          } else {
+            // Note: The user refers to this phase as "onboarding" too, 
+            // but we route to the strict plan selection page UX.
+            window.location.href = "/select-plan";
+          }
+        } catch (err) {
+          window.location.href = "/onboarding";
+        }
       }
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Authentication failed");
@@ -92,7 +107,20 @@ export default function AuthPage({ mode }: Props) {
 
       setFormSuccess("✅ Signed in with Google! Redirecting…");
       setIsRedirecting(true);
-      setTimeout(() => { window.location.href = "/"; }, 1200);
+      
+      try {
+        const { getMe } = await import('../api/client');
+        const { owner, subscription } = await getMe();
+        if (!owner) {
+          window.location.href = "/onboarding";
+        } else if (subscription?.status === 'active') {
+          window.location.href = "/dashboard";
+        } else {
+          window.location.href = "/select-plan";
+        }
+      } catch (err) {
+        window.location.href = "/onboarding";
+      }
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Google sign-in failed");
       setFormLoading(false);
