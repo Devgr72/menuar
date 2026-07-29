@@ -6,7 +6,7 @@ export type SlotStatus = 'empty' | 'photos_uploaded' | 'processing' | 'glb_ready
 export interface IDishSlot {
   _id: string;
   restaurantId: string;
-  slotNumber: number; // 1-10
+  slotNumber: number; // 1-3
   dishName?: string;
   description?: string;
   ingredients?: string;

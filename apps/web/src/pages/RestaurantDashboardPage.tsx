@@ -270,7 +270,7 @@ function ProfileEditWrapper({
                 </div>
                 <div>
                   <p className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider">Live Status</p>
-                  <p className="font-outfit text-sm font-bold text-[#1E293B]">{liveCount}/10 Dishes Active</p>
+                  <p className="font-outfit text-sm font-bold text-[#1E293B]">{liveCount}/{slots.length} Dishes Active</p>
                 </div>
              </div>
           </div>
@@ -326,7 +326,7 @@ function ProfileEditWrapper({
                       <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-[#F1F5F9]" />
                     ))}
                   </div>
-                  <span className="text-xs font-bold text-[#64748B]">{liveCount}/10 slots used</span>
+                  <span className="text-xs font-bold text-[#64748B]">{liveCount}/{slots.length} slots used</span>
                 </div>
               </div>
 

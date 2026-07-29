@@ -53,6 +53,11 @@ async function main() {
     );
   }
 
+  const { isEmailConfigured } = await import('./services/email.service.js');
+  if (!isEmailConfigured()) {
+    throw new Error('Email is not configured — set SMTP_HOST, SMTP_USER, SMTP_PASS, SMTP_FROM');
+  }
+
   await connectDB();
   console.log('MongoDB Atlas connected');
 

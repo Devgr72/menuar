@@ -18,6 +18,20 @@ export default function AuthPage({ mode }: Props) {
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  const RESEND_COOLDOWN_SECONDS = 30;
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => setResendCooldown((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown > 0]);
 
   useEffect(() => {
     if (location.pathname.includes("sign-in")) setActiveMode("sign-in");
@@ -29,11 +43,33 @@ export default function AuthPage({ mode }: Props) {
     setFormError(null);
     setFormSuccess(null);
     setIsRedirecting(false);
+    setNeedsVerification(false);
+    setResendSuccess(false);
+    setResendCooldown(0);
+    setOtp("");
     setEmail("");
     setPassword("");
     setName("");
     navigate(m === "sign-in" ? "/sign-in" : "/sign-up");
   };
+
+  async function redirectPostAuth() {
+    try {
+      const { getMe } = await import('../api/client');
+      const { owner, subscription } = await getMe();
+      if (!owner) {
+        window.location.href = "/onboarding";
+      } else if (subscription?.status === 'active') {
+        window.location.href = "/dashboard";
+      } else {
+        // Note: The user refers to this phase as "onboarding" too,
+        // but we route to the strict plan selection page UX.
+        window.location.href = "/select-plan";
+      }
+    } catch (err) {
+      window.location.href = "/onboarding";
+    }
+  }
 
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,36 +82,62 @@ export default function AuthPage({ mode }: Props) {
       if (activeMode === "sign-up") {
         const { error } = await authClient.signUp.email({ email, password, name });
         if (error) throw new Error(error.message ?? "Sign up failed");
-        setFormSuccess("🎉 Account created! Setting up your workspace…");
-        setIsRedirecting(true);
-        // Give the session time to propagate, then redirect via full reload
-        setTimeout(() => { window.location.href = "/onboarding"; }, 1800);
+        setNeedsVerification(true);
+        setResendCooldown(RESEND_COOLDOWN_SECONDS);
+        setFormLoading(false);
       } else {
         const { error } = await signIn.email({ email, password });
-        if (error) throw new Error(error.message ?? "Invalid email or password");
+        if (error) {
+          if (error.code === "EMAIL_NOT_VERIFIED") {
+            setNeedsVerification(true);
+            setResendCooldown(RESEND_COOLDOWN_SECONDS);
+            setFormLoading(false);
+            await authClient.emailOtp.sendVerificationOtp({ email, type: "email-verification" });
+            return;
+          }
+          throw new Error(error.message ?? "Invalid email or password");
+        }
         setFormSuccess("✅ Signed in successfully! Redirecting…");
         setIsRedirecting(true);
-        
-        try {
-          const { getMe } = await import('../api/client');
-          const { owner, subscription } = await getMe();
-          if (!owner) {
-            window.location.href = "/onboarding";
-          } else if (subscription?.status === 'active') {
-            window.location.href = "/dashboard";
-          } else {
-            // Note: The user refers to this phase as "onboarding" too, 
-            // but we route to the strict plan selection page UX.
-            window.location.href = "/select-plan";
-          }
-        } catch (err) {
-          window.location.href = "/onboarding";
-        }
+        await redirectPostAuth();
       }
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Authentication failed");
       setFormLoading(false);
       setIsRedirecting(false);
+    }
+  }
+
+  async function handleVerifyOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setVerifyLoading(true);
+    setFormError(null);
+    try {
+      const { error } = await authClient.emailOtp.verifyEmail({ email, otp });
+      if (error) throw new Error(error.message ?? "Invalid or expired code");
+      setFormSuccess("✅ Email verified! Redirecting…");
+      setIsRedirecting(true);
+      await redirectPostAuth();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Invalid or expired code");
+      setVerifyLoading(false);
+    }
+  }
+
+  async function handleResendVerification() {
+    if (resendCooldown > 0) return;
+    setResendLoading(true);
+    setFormError(null);
+    setResendSuccess(false);
+    try {
+      const { error } = await authClient.emailOtp.sendVerificationOtp({ email, type: "email-verification" });
+      if (error) throw new Error(error.message ?? "Could not resend verification code");
+      setResendSuccess(true);
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Could not resend verification code");
+    } finally {
+      setResendLoading(false);
     }
   }
 
@@ -301,6 +363,57 @@ export default function AuthPage({ mode }: Props) {
                 </p>
               </div>
 
+              {needsVerification ? (
+                <div className="rounded-xl bg-[#6b3cff]/10 border border-[#6b3cff]/30 p-5 fade-slide-up">
+                  <p className="text-white/80 text-[14px] font-bold mb-1">Verify your email</p>
+                  <p className="text-white/40 text-[13px] leading-relaxed mb-4">
+                    We sent a 6-digit code to <span className="text-white/70 font-semibold">{email}</span>. Enter it below to activate your account.
+                  </p>
+                  <form onSubmit={handleVerifyOtp} className="flex flex-col gap-3">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      required
+                      maxLength={6}
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                      placeholder="000000"
+                      disabled={verifyLoading || isRedirecting}
+                      className="input-focus h-14 rounded-xl bg-white/[0.03] border border-white/[0.07] text-white/90 placeholder:text-white/25 px-5 text-center text-[20px] tracking-[0.4em] font-bold disabled:opacity-50"
+                    />
+                    <button
+                      type="submit"
+                      disabled={verifyLoading || isRedirecting || otp.length !== 6}
+                      className="h-12 rounded-xl text-white font-bold text-[14px] transition-all duration-300 disabled:opacity-50"
+                      style={{ background: 'linear-gradient(135deg, #6b3cff 0%, #8b5cf6 50%, #6b3cff 100%)' }}
+                    >
+                      {verifyLoading ? "Verifying…" : "Verify Email"}
+                    </button>
+                  </form>
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      onClick={handleResendVerification}
+                      disabled={resendLoading || resendCooldown > 0}
+                      className="text-[#a78bff] text-[13px] font-bold hover:underline disabled:opacity-50 disabled:hover:no-underline"
+                    >
+                      {resendLoading
+                        ? "Resending…"
+                        : resendCooldown > 0
+                          ? `Resend code in ${resendCooldown}s`
+                          : "Resend code"}
+                    </button>
+                    {resendSuccess && resendCooldown > 0 && (
+                      <p className="text-[#00c896] text-[12px] font-bold mt-1">Code resent — check your inbox.</p>
+                    )}
+                  </div>
+                  {formError && (
+                    <p className="text-red-400 text-[13px] font-medium mt-3">{formError}</p>
+                  )}
+                </div>
+              ) : (
+                <>
               {/* Success banner with progress bar */}
               {formSuccess && (
                 <div className="mb-5 rounded-xl bg-[#00c896]/10 border border-[#00c896]/30 overflow-hidden">
@@ -428,6 +541,8 @@ export default function AuthPage({ mode }: Props) {
                   Continue with Google
                 </button>
               </div>
+              </>
+              )}
             </div>
 
             {/* Mobile footer toggle */}

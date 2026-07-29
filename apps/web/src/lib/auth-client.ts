@@ -1,4 +1,5 @@
 import { createAuthClient } from 'better-auth/react'
+import { emailOTPClient } from 'better-auth/client/plugins'
 
 // better-auth requires an absolute URL — relative paths throw "Invalid URL"
 // In dev: proxy sends /api/auth → localhost:3001, so use window.location.origin
@@ -9,6 +10,7 @@ const authBase = import.meta.env.VITE_API_URL
 
 export const authClient = createAuthClient({
   baseURL: authBase,
+  plugins: [emailOTPClient()],
 })
 
 export const {

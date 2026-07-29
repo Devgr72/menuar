@@ -136,8 +136,8 @@ router.post(
     const userId = res.locals.userId as string;
 
     const slotNumber = parseInt(req.params.slotNumber, 10);
-    if (isNaN(slotNumber) || slotNumber < 1 || slotNumber > 10) {
-      res.status(400).json({ error: 'Slot number must be 1-10', code: 'INVALID_SLOT' });
+    if (isNaN(slotNumber) || slotNumber < 1 || slotNumber > 3) {
+      res.status(400).json({ error: 'Slot number must be 1-3', code: 'INVALID_SLOT' });
       return;
     }
 

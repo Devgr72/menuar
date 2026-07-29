@@ -1,7 +1,8 @@
 import { betterAuth } from 'better-auth'
+import { emailOTP } from 'better-auth/plugins'
 import { mongodbAdapter } from 'better-auth/adapters/mongodb'
-import nodemailer from 'nodemailer'
 import { getNativeDb } from '../db/connection.js'
+import { sendVerificationOTPEmail } from '../services/email.service.js'
 
 const { db, client } = getNativeDb()
 
@@ -10,7 +11,7 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET!,
   baseURL: `${process.env.WEB_URL || 'https://menuar-web.vercel.app'}/api/auth`,
 
-  emailAndPassword: { enabled: true },
+  emailAndPassword: { enabled: true, requireEmailVerification: true },
 
   socialProviders: {
     google: {
@@ -20,25 +21,20 @@ export const auth = betterAuth({
   },
 
   emailVerification: {
-    sendVerificationEmail: async ({ user, url }) => {
-      if (!process.env.SMTP_HOST) {
-        // Skip email in dev if SMTP not configured
-        console.log(`[auth] Verification email for ${user.email}: ${url}`)
-        return
-      }
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT) || 587,
-        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-      })
-      await transporter.sendMail({
-        from: process.env.SMTP_FROM || 'noreply@dishdekho.app',
-        to: user.email,
-        subject: 'Verify your DishDekho email',
-        html: `<p>Click to verify your email: <a href="${url}">${url}</a></p>`,
-      })
-    },
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
   },
+
+  plugins: [
+    emailOTP({
+      otpLength: 6,
+      expiresIn: 600,
+      overrideDefaultEmailVerification: true,
+      sendVerificationOTP: async ({ email, otp, type }) => {
+        if (type === 'email-verification') await sendVerificationOTPEmail(email, otp)
+      },
+    }),
+  ],
 
   trustedOrigins: [
     process.env.WEB_URL || 'https://menuar-web.vercel.app',

@@ -38,7 +38,7 @@ interface RazorpayInstance {
 }
 
 const FEATURES = [
-  { icon: '🥘', text: '10 dishes with live 3D AR models' },
+  { icon: '🥘', text: '3 dishes with live 3D AR models' },
   { icon: '📱', text: 'QR code per table — no app needed' },
   { icon: '📊', text: 'Real-time scan analytics dashboard' },
   { icon: '🖼️', text: 'Photo upload for all dishes' },

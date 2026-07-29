@@ -55,7 +55,7 @@ export interface Subscription {
 export interface DishSlot {
   id: string;
   restaurantId: string;
-  slotNumber: number; // 1-10
+  slotNumber: number; // 1-3
   dishName?: string;
   description?: string;
   ingredients?: string;

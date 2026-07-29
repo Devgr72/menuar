@@ -36,7 +36,7 @@ async function generateSlug(name: string): Promise<string> {
   return slug;
 }
 
-/** POST /api/v1/auth/register — create restaurant + owner + 10 dish slots */
+/** POST /api/v1/auth/register — create restaurant + owner + 3 dish slots */
 router.post('/register', requireAuth, async (req, res) => {
   const userId = res.locals.userId as string;
   if (!userId) {
@@ -75,7 +75,7 @@ router.post('/register', requireAuth, async (req, res) => {
       );
 
       await DishSlot.insertMany(
-        Array.from({ length: 10 }, (_, i) => ({
+        Array.from({ length: 3 }, (_, i) => ({
           restaurantId: restaurant._id,
           slotNumber: i + 1,
           status: 'empty',
