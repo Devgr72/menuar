@@ -1,13 +1,32 @@
-import { Router, raw } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { verifyWebhookSignature } from '../services/razorpay.service';
+import { Router } from 'express';
+import mongoose from 'mongoose';
+import { Subscription, Restaurant, Menu, Category, PaymentEvent } from '../db/models/index.js';
+import { verifyWebhookSignature } from '../services/razorpay.service.js';
 import QRCode from 'qrcode';
-import { saveFile } from '../services/storage.service';
+import { saveFile } from '../services/storage.service.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 const WEB_URL = process.env.WEB_URL || 'http://localhost:3000';
+
+/** Runs a subscription-status update + payment-event log atomically. */
+async function recordEvent(
+  subscriptionId: string,
+  update: Record<string, unknown>,
+  eventType: string,
+  razorpayEventId: string,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      await Subscription.updateOne({ _id: subscriptionId }, update, { session });
+      await PaymentEvent.create([{ subscriptionId, eventType, razorpayEventId, payload }], { session });
+    });
+  } finally {
+    await session.endSession();
+  }
+}
 
 /** POST /api/v1/webhook/razorpay — Razorpay sends all subscription events here */
 // Note: raw body needed for signature verification — mounted with express.raw() in index.ts
@@ -39,10 +58,7 @@ router.post('/razorpay', async (req, res) => {
     return;
   }
 
-  const subscription = await prisma.subscription.findUnique({
-    where: { razorpaySubId },
-    include: { restaurant: true },
-  });
+  const subscription = await Subscription.findOne({ razorpaySubId }).lean();
 
   if (!subscription) {
     // Unknown subscription — ack to prevent Razorpay retries
@@ -50,112 +66,83 @@ router.post('/razorpay', async (req, res) => {
     return;
   }
 
-  // Idempotency: use razorpayEventId to avoid duplicate processing
-  const razorpayEventId = `${eventType}:${razorpaySubId}:${Date.now()}`;
+  const restaurant = await Restaurant.findById(subscription.restaurantId).lean();
 
   try {
     switch (eventType) {
       case 'subscription.activated': {
         const chargeAt = subPayload?.charge_at as number | undefined;
-        await prisma.$transaction(async (tx) => {
-          await tx.subscription.update({
-            where: { id: subscription.id },
-            data: {
-              status: 'active',
-              activatedAt: new Date(),
-              nextBillingAt: chargeAt ? new Date(chargeAt * 1000) : undefined,
-              haltedAt: null,
-            },
-          });
-          await tx.paymentEvent.create({
-            data: {
-              subscriptionId: subscription.id,
-              eventType: 'subscription_activated',
-              razorpayEventId: `${eventType}-${razorpaySubId}`,
-              payload: event.payload as object,
-            },
-          });
-        });
-
-        // Generate + store QR code (fire-and-forget ok, non-critical path)
-        generateAndStoreQR(subscription.restaurantId, subscription.restaurant.slug).catch(
-          (err) => console.error('QR generation failed:', err),
+        await recordEvent(
+          subscription._id,
+          {
+            status: 'active',
+            activatedAt: new Date(),
+            nextBillingAt: chargeAt ? new Date(chargeAt * 1000) : undefined,
+            haltedAt: null,
+          },
+          'subscription_activated',
+          `${eventType}-${razorpaySubId}`,
+          event.payload,
         );
 
-        // Create default menu skeleton if not exists
-        createDefaultMenu(subscription.restaurantId).catch(
-          (err) => console.error('Default menu creation failed:', err),
-        );
+        if (restaurant) {
+          // Generate + store QR code (fire-and-forget ok, non-critical path)
+          generateAndStoreQR(subscription.restaurantId, restaurant.slug).catch((err) =>
+            console.error('QR generation failed:', err),
+          );
+
+          // Create default menu skeleton if not exists
+          createDefaultMenu(subscription.restaurantId).catch((err) =>
+            console.error('Default menu creation failed:', err),
+          );
+        }
         break;
       }
 
       case 'subscription.charged': {
         const chargeAt = subPayload?.charge_at as number | undefined;
-        await prisma.$transaction(async (tx) => {
-          await tx.subscription.update({
-            where: { id: subscription.id },
-            data: {
-              status: 'active',
-              nextBillingAt: chargeAt ? new Date(chargeAt * 1000) : undefined,
-            },
-          });
-          await tx.paymentEvent.create({
-            data: {
-              subscriptionId: subscription.id,
-              eventType: 'subscription_charged',
-              razorpayEventId: `${eventType}-${razorpaySubId}-${Date.now()}`,
-              payload: event.payload as object,
-            },
-          });
-        });
+        await recordEvent(
+          subscription._id,
+          {
+            status: 'active',
+            nextBillingAt: chargeAt ? new Date(chargeAt * 1000) : undefined,
+          },
+          'subscription_charged',
+          `${eventType}-${razorpaySubId}-${Date.now()}`,
+          event.payload,
+        );
         break;
       }
 
       case 'subscription.halted': {
-        await prisma.$transaction(async (tx) => {
-          await tx.subscription.update({
-            where: { id: subscription.id },
-            data: { status: 'halted', haltedAt: new Date() },
-          });
-          await tx.paymentEvent.create({
-            data: {
-              subscriptionId: subscription.id,
-              eventType: 'subscription_halted',
-              razorpayEventId: `${eventType}-${razorpaySubId}`,
-              payload: event.payload as object,
-            },
-          });
-        });
+        await recordEvent(
+          subscription._id,
+          { status: 'halted', haltedAt: new Date() },
+          'subscription_halted',
+          `${eventType}-${razorpaySubId}`,
+          event.payload,
+        );
         break;
       }
 
       case 'subscription.cancelled': {
-        await prisma.$transaction(async (tx) => {
-          await tx.subscription.update({
-            where: { id: subscription.id },
-            data: { status: 'cancelled', cancelledAt: new Date() },
-          });
-          await tx.paymentEvent.create({
-            data: {
-              subscriptionId: subscription.id,
-              eventType: 'subscription_cancelled',
-              razorpayEventId: `${eventType}-${razorpaySubId}`,
-              payload: event.payload as object,
-            },
-          });
-        });
+        await recordEvent(
+          subscription._id,
+          { status: 'cancelled', cancelledAt: new Date() },
+          'subscription_cancelled',
+          `${eventType}-${razorpaySubId}`,
+          event.payload,
+        );
         break;
       }
 
       case 'payment.failed': {
         // Record the event; subscription may still retry — don't change status
-        await prisma.paymentEvent.create({
-          data: {
-            subscriptionId: subscription.id,
-            eventType: 'payment_failed',
-            razorpayEventId: `${eventType}-${razorpaySubId}-${Date.now()}`,
-            payload: event.payload as object,
-          },
+        await PaymentEvent.create({
+          subscriptionId: subscription._id,
+          eventType: 'payment_failed',
+          razorpayEventId: `${eventType}-${razorpaySubId}-${Date.now()}`,
+          payload: event.payload,
         });
         break;
       }
@@ -171,7 +158,6 @@ router.post('/razorpay', async (req, res) => {
 
   // Always 200 so Razorpay stops retrying
   res.json({ received: true });
-  return razorpayEventId; // unused, suppresses TS unused var warning
 });
 
 async function generateAndStoreQR(restaurantId: string, slug: string): Promise<void> {
@@ -185,24 +171,15 @@ async function generateAndStoreQR(restaurantId: string, slug: string): Promise<v
 
   const { url } = await saveFile(`qr/${restaurantId}`, 'main.png', qrBuffer);
 
-  await prisma.restaurant.update({
-    where: { id: restaurantId },
-    data: { qrKey: `qr/${restaurantId}/main.png`, qrUrl: url },
-  });
+  await Restaurant.updateOne({ _id: restaurantId }, { qrKey: `qr/${restaurantId}/main.png`, qrUrl: url });
 }
 
 async function createDefaultMenu(restaurantId: string): Promise<void> {
-  const existing = await prisma.menu.findFirst({ where: { restaurantId } });
+  const existing = await Menu.findOne({ restaurantId }).lean();
   if (existing) return;
 
-  await prisma.$transaction(async (tx) => {
-    const menu = await tx.menu.create({
-      data: { restaurantId, name: 'Menu', isActive: true },
-    });
-    await tx.category.create({
-      data: { menuId: menu.id, name: 'Dishes', sortOrder: 0 },
-    });
-  });
+  const menu = await Menu.create({ restaurantId, name: 'Menu', isActive: true });
+  await Category.create({ menuId: menu._id, name: 'Dishes', sortOrder: 0 });
 }
 
 export default router;

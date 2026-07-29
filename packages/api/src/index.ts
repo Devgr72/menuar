@@ -3,12 +3,11 @@ dotenv.config();
 
 import express from 'express';
 import cors from 'cors';
-import path from 'path';
-import { auth } from './lib/auth';
-import { toNodeHandler } from 'better-auth/node';
+import { connectDB } from './db/connection.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const IS_DEV = process.env.NODE_ENV !== 'production';
 
 // Allow both http and https localhost in dev; use WEB_URL in production
 const allowedOrigins = [
@@ -16,93 +15,112 @@ const allowedOrigins = [
   'http://localhost:3000',
   'https://localhost:3000',
   'http://localhost:3002',
-  process.env.WEB_URL
+  process.env.WEB_URL,
 ].filter(Boolean) as string[];
 
-app.use(cors({
-  origin: (origin, cb) => {
-    // Allow requests with no origin (mobile apps, curl, same-origin via proxy)
-    if (!origin) return cb(null, true);
-    if (allowedOrigins.includes(origin)) return cb(null, true);
-    cb(new Error(`CORS: ${origin} not allowed`));
-  },
-  credentials: true,
-}));
-
-// Better Auth handles all /api/auth/* routes (sign-in, sign-up, OAuth, sign-out)
-// Must be mounted BEFORE express.json() as it reads raw body internally
-app.all('/api/auth/*', toNodeHandler(auth));
-
-// Raw body for Razorpay webhook signature verification — mount BEFORE express.json()
 app.use(
-  '/api/v1/webhook/razorpay',
-  express.raw({ type: 'application/json' }),
+  cors({
+    origin: (origin, cb) => {
+      // Allow requests with no origin (mobile apps, curl, same-origin via proxy)
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      cb(new Error(`CORS: ${origin} not allowed`));
+    },
+    credentials: true,
+  }),
 );
 
-app.use(express.json());
+/** Readable per-request log: method, path, status, duration — colorized like the route-level [auth]/[subscription] logs. */
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const ms = Date.now() - start;
+    const color = res.statusCode >= 500 ? '\x1b[31m' : res.statusCode >= 400 ? '\x1b[33m' : '\x1b[32m';
+    console.log(`${color}${res.statusCode}\x1b[0m ${req.method} ${req.originalUrl} - ${ms}ms`);
+  });
+  next();
+});
 
-// Serve uploaded files (photos + models) — local storage fallback while R2 not configured
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
-
-// Health check
 app.get('/', (_req, res) => {
   res.json({ status: 'ok', service: 'MenuAR API' });
 });
 
-async function mountRoutes() {
-  if (!process.env.DATABASE_URL) {
-    console.warn('DATABASE_URL not set — skipping DB routes');
-    return;
+async function main() {
+  const { isR2Configured } = await import('./services/r2.service.js');
+  if (!isR2Configured()) {
+    throw new Error(
+      'Cloudflare R2 is not configured — set CLOUDFLARE_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL',
+    );
   }
 
-  try {
-    const { default: menuRoutes } = await import('./routes/menu.routes');
-    const { default: dishRoutes } = await import('./routes/dish.routes');
-    const { default: authRoutes } = await import('./routes/auth.routes');
-    const { default: subscriptionRoutes } = await import('./routes/subscription.routes');
-    const { default: restaurantRoutes } = await import('./routes/restaurant.routes');
-    const { default: adminRoutes } = await import('./routes/admin.routes');
-    const { default: webhookRoutes } = await import('./routes/webhook.routes');
-    const { startPoller } = await import('./services/pipeline.service');
+  await connectDB();
+  console.log('MongoDB Atlas connected');
 
-    app.use('/api/v1/menu', menuRoutes);
-    app.use('/api/v1/dish', dishRoutes);
-    app.use('/api/v1/auth', authRoutes);
-    app.use('/api/v1/subscription', subscriptionRoutes);
-    app.use('/api/v1/restaurant', restaurantRoutes);
-    app.use('/api/v1/admin', adminRoutes);
-    app.use('/api/v1/webhook', webhookRoutes);
+  // Better Auth handles all /api/auth/* routes (sign-in, sign-up, OAuth, sign-out)
+  // Must be mounted BEFORE express.json() as it reads the raw body internally
+  const { auth } = await import('./lib/auth.js');
+  const { toNodeHandler } = await import('better-auth/node');
+  app.all('/api/auth/*', toNodeHandler(auth));
 
-    // Dev-only manual activation route (never mounted in production)
-    if (process.env.NODE_ENV !== 'production') {
-      const { default: devRoutes } = await import('./routes/dev.routes');
-      app.use('/api/v1/dev', devRoutes);
-      console.log('  POST /api/v1/dev/activate  [DEV ONLY]');
-    }
+  // Raw body for Razorpay webhook signature verification — mount BEFORE express.json()
+  app.use('/api/v1/webhook/razorpay', express.raw({ type: 'application/json' }));
 
-    startPoller();
+  app.use(express.json());
 
-    console.log('Routes mounted:');
-    console.log('  GET  /api/v1/menu/:restaurantSlug');
-    console.log('  POST /api/v1/menu/:restaurantSlug/scan');
-    console.log('  GET  /api/v1/dish/:dishId');
-    console.log('  POST /api/v1/auth/register');
-    console.log('  GET  /api/v1/auth/me');
-    console.log('  POST /api/v1/subscription/create');
-    console.log('  GET  /api/v1/subscription/status');
-    console.log('  GET  /api/v1/restaurant/dashboard');
-    console.log('  POST /api/v1/restaurant/slots/:n/photos');
-    console.log('  GET  /api/v1/admin/stats');
-    console.log('  GET  /api/v1/admin/restaurants');
-    console.log('  POST /api/v1/admin/slots/:slotId/glb');
-    console.log('  POST /api/v1/webhook/razorpay');
-  } catch (err) {
-    console.error('Failed to mount routes:', err);
+  const { default: menuRoutes } = await import('./routes/menu.routes.js');
+  const { default: dishRoutes } = await import('./routes/dish.routes.js');
+  const { default: authRoutes } = await import('./routes/auth.routes.js');
+  const { default: subscriptionRoutes } = await import('./routes/subscription.routes.js');
+  const { default: restaurantRoutes } = await import('./routes/restaurant.routes.js');
+  const { default: adminRoutes } = await import('./routes/admin.routes.js');
+  const { default: webhookRoutes } = await import('./routes/webhook.routes.js');
+  const { startPoller } = await import('./services/pipeline.service.js');
+
+  app.use('/api/v1/menu', menuRoutes);
+  app.use('/api/v1/dish', dishRoutes);
+  app.use('/api/v1/auth', authRoutes);
+  app.use('/api/v1/subscription', subscriptionRoutes);
+  app.use('/api/v1/restaurant', restaurantRoutes);
+  app.use('/api/v1/admin', adminRoutes);
+  app.use('/api/v1/webhook', webhookRoutes);
+
+  // Dev-only manual activation route (never mounted in production)
+  if (IS_DEV) {
+    const { default: devRoutes } = await import('./routes/dev.routes.js');
+    app.use('/api/v1/dev', devRoutes);
+    console.log('  POST /api/v1/dev/activate  [DEV ONLY]');
   }
-}
 
-mountRoutes().then(() => {
+  startPoller();
+
+  // Error handler — must be mounted last. Prints full stack traces so failures are visible in the terminal.
+  app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    console.error(`\x1b[31m✗ ${req.method} ${req.originalUrl}\x1b[0m`, err.stack || err);
+    if (res.headersSent) return;
+    res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' });
+  });
+
+  console.log('Routes mounted:');
+  console.log('  GET  /api/v1/menu/:restaurantSlug');
+  console.log('  POST /api/v1/menu/:restaurantSlug/scan');
+  console.log('  GET  /api/v1/dish/:dishId');
+  console.log('  POST /api/v1/auth/register');
+  console.log('  GET  /api/v1/auth/me');
+  console.log('  POST /api/v1/subscription/create');
+  console.log('  GET  /api/v1/subscription/status');
+  console.log('  GET  /api/v1/restaurant/dashboard');
+  console.log('  POST /api/v1/restaurant/slots/:n/photos');
+  console.log('  GET  /api/v1/admin/stats');
+  console.log('  GET  /api/v1/admin/restaurants');
+  console.log('  POST /api/v1/admin/slots/:slotId/glb');
+  console.log('  POST /api/v1/webhook/razorpay');
+
   app.listen(PORT, () => {
     console.log(`MenuAR API running on port ${PORT}`);
   });
+}
+
+main().catch((err) => {
+  console.error('\x1b[31mFatal startup error:\x1b[0m', err);
+  process.exit(1);
 });

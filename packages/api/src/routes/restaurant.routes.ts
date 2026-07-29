@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { PrismaClient } from '@prisma/client';
-import { requireAuth } from '../middleware/auth';
-import { saveFile } from '../services/storage.service';
+import { Restaurant, RestaurantOwner, Subscription, DishSlot } from '../db/models/index.js';
+import { requireAuth } from '../middleware/auth.js';
+import { saveFile } from '../services/storage.service.js';
+import { toId, toIds } from '../db/serialize.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -24,52 +24,51 @@ router.get('/dashboard', requireAuth, async (req, res) => {
   const userId = res.locals.userId as string;
 
   try {
-    const owner = await prisma.restaurantOwner.findUnique({
-      where: { userId: userId },
-      include: {
-        restaurant: {
-          include: {
-            subscription: true,
-            slots: { orderBy: { slotNumber: 'asc' } },
-          },
-        },
-      },
-    });
-
+    const owner = await RestaurantOwner.findOne({ userId }).lean();
     if (!owner) {
       res.status(404).json({ error: 'Not registered', code: 'NOT_REGISTERED' });
       return;
     }
 
-const resOwner = owner as any;
+    const [restaurant, subscription, slots] = await Promise.all([
+      Restaurant.findById(owner.restaurantId).lean(),
+      Subscription.findOne({ restaurantId: owner.restaurantId }).lean(),
+      DishSlot.find({ restaurantId: owner.restaurantId }).sort({ slotNumber: 1 }).lean(),
+    ]);
+
+    if (!restaurant) {
+      res.status(404).json({ error: 'Not registered', code: 'NOT_REGISTERED' });
+      return;
+    }
+
     res.json({
       owner: {
-        id: resOwner.id,
-        ownerName: resOwner.ownerName,
-        email: resOwner.email,
-        restaurantId: resOwner.restaurantId,
-        createdAt: resOwner.createdAt,
+        id: owner._id,
+        ownerName: owner.ownerName,
+        email: owner.email,
+        restaurantId: owner.restaurantId,
+        createdAt: owner.createdAt,
       },
       restaurant: {
-        id: resOwner.restaurant.id,
-        name: resOwner.restaurant.name,
-        slug: resOwner.restaurant.slug,
-        plan: resOwner.restaurant.plan,
-        qrUrl: resOwner.restaurant.qrUrl,
-        scanCount: resOwner.restaurant.scanCount,
-        createdAt: resOwner.restaurant.createdAt,
+        id: restaurant._id,
+        name: restaurant.name,
+        slug: restaurant.slug,
+        plan: restaurant.plan,
+        qrUrl: restaurant.qrUrl,
+        scanCount: restaurant.scanCount,
+        createdAt: restaurant.createdAt,
       },
-      subscription: resOwner.restaurant.subscription
+      subscription: subscription
         ? {
-            id: owner.restaurant.subscription.id,
-            status: owner.restaurant.subscription.status,
-            amount: owner.restaurant.subscription.amount,
-            activatedAt: owner.restaurant.subscription.activatedAt,
-            nextBillingAt: owner.restaurant.subscription.nextBillingAt,
-            haltedAt: owner.restaurant.subscription.haltedAt,
+            id: subscription._id,
+            status: subscription.status,
+            amount: subscription.amount,
+            activatedAt: subscription.activatedAt,
+            nextBillingAt: subscription.nextBillingAt,
+            haltedAt: subscription.haltedAt,
           }
         : null,
-      slots: owner.restaurant.slots,
+      slots: toIds(slots),
     });
   } catch (err) {
     console.error('[Dashboard Error]', err);
@@ -87,7 +86,7 @@ router.patch('/profile', requireAuth, async (req, res) => {
     return;
   }
 
-  const owner = await prisma.restaurantOwner.findUnique({ where: { userId: userId } });
+  const owner = await RestaurantOwner.findOne({ userId }).lean();
   if (!owner) {
     res.status(404).json({ error: 'Not registered', code: 'NOT_REGISTERED' });
     return;
@@ -95,10 +94,10 @@ router.patch('/profile', requireAuth, async (req, res) => {
 
   await Promise.all([
     ownerName?.trim()
-      ? prisma.restaurantOwner.update({ where: { id: owner.id }, data: { ownerName: ownerName.trim() } })
+      ? RestaurantOwner.updateOne({ _id: owner._id }, { ownerName: ownerName.trim() })
       : Promise.resolve(),
     restaurantName?.trim()
-      ? prisma.restaurant.update({ where: { id: owner.restaurantId }, data: { name: restaurantName.trim() } })
+      ? Restaurant.updateOne({ _id: owner.restaurantId }, { name: restaurantName.trim() })
       : Promise.resolve(),
   ]);
 
@@ -109,18 +108,15 @@ router.patch('/profile', requireAuth, async (req, res) => {
 router.get('/slots', requireAuth, async (req, res) => {
   const userId = res.locals.userId as string;
 
-  const owner = await prisma.restaurantOwner.findUnique({ where: { userId: userId } });
+  const owner = await RestaurantOwner.findOne({ userId }).lean();
   if (!owner) {
     res.status(404).json({ error: 'Not registered', code: 'NOT_REGISTERED' });
     return;
   }
 
-  const slots = await prisma.dishSlot.findMany({
-    where: { restaurantId: owner.restaurantId },
-    orderBy: { slotNumber: 'asc' },
-  });
+  const slots = await DishSlot.find({ restaurantId: owner.restaurantId }).sort({ slotNumber: 1 }).lean();
 
-  res.json({ slots });
+  res.json({ slots: toIds(slots) });
 });
 
 /** POST /api/v1/restaurant/slots/:slotNumber/photos
@@ -154,26 +150,19 @@ router.post(
       return;
     }
 
-    const owner = await prisma.restaurantOwner.findUnique({
-      where: { userId: userId },
-      include: { restaurant: { include: { subscription: true } } },
-    });
-
+    const owner = await RestaurantOwner.findOne({ userId }).lean();
     if (!owner) {
       res.status(404).json({ error: 'Not registered', code: 'NOT_REGISTERED' });
       return;
     }
 
-    const resOwner = owner as any;
-    if (resOwner.restaurant.subscription?.status !== 'active') {
+    const subscription = await Subscription.findOne({ restaurantId: owner.restaurantId }).lean();
+    if (subscription?.status !== 'active') {
       res.status(403).json({ error: 'Active subscription required', code: 'NO_SUBSCRIPTION' });
       return;
     }
 
-    const slot = await prisma.dishSlot.findUnique({
-      where: { restaurantId_slotNumber: { restaurantId: owner.restaurantId, slotNumber } },
-    });
-
+    const slot = await DishSlot.findOne({ restaurantId: owner.restaurantId, slotNumber });
     if (!slot) {
       res.status(404).json({ error: 'Slot not found', code: 'SLOT_NOT_FOUND' });
       return;
@@ -201,14 +190,19 @@ router.post(
       photoKeys.push(key);
     }
 
-    const { dishName, description, price, isVeg } = req.body as { dishName?: string; description?: string; price?: string; isVeg?: string };
+    const { dishName, description, price, isVeg } = req.body as {
+      dishName?: string;
+      description?: string;
+      price?: string;
+      isVeg?: string;
+    };
 
     const parsedPrice = price && !isNaN(parseFloat(price)) ? parseFloat(price) : undefined;
     const parsedIsVeg = isVeg ? isVeg === 'true' : undefined;
 
-    const updated = await prisma.dishSlot.update({
-      where: { id: slot.id },
-      data: {
+    const updated = await DishSlot.findByIdAndUpdate(
+      slot._id,
+      {
         ...(photoKeys.length > 0 ? { photoKeys } : {}),
         ...(menuPhotoKey ? { menuPhotoKey, menuPhotoUrl } : {}),
         status: 'photos_uploaded',
@@ -217,13 +211,14 @@ router.post(
         ...(parsedPrice !== undefined ? { price: parsedPrice } : {}),
         ...(parsedIsVeg !== undefined ? { isVeg: parsedIsVeg } : {}),
       },
-    });
+      { new: true },
+    ).lean();
 
     res.json({
-      slotNumber: updated.slotNumber,
-      menuPhotoUrl: updated.menuPhotoUrl,
-      photoKeys: updated.photoKeys,
-      status: updated.status,
+      slotNumber: updated!.slotNumber,
+      menuPhotoUrl: updated!.menuPhotoUrl,
+      photoKeys: updated!.photoKeys,
+      status: updated!.status,
     });
   },
 );

@@ -1,12 +1,12 @@
 import { betterAuth } from 'better-auth'
-import { prismaAdapter } from 'better-auth/adapters/prisma'
-import { PrismaClient } from '@prisma/client'
+import { mongodbAdapter } from 'better-auth/adapters/mongodb'
 import nodemailer from 'nodemailer'
+import { getNativeDb } from '../db/connection.js'
 
-const prisma = new PrismaClient()
+const { db, client } = getNativeDb()
 
 export const auth = betterAuth({
-  database: prismaAdapter(prisma, { provider: 'postgresql' }),
+  database: mongodbAdapter(db, { client }),
   secret: process.env.BETTER_AUTH_SECRET!,
   baseURL: `${process.env.WEB_URL || 'https://menuar-web.vercel.app'}/api/auth`,
 
