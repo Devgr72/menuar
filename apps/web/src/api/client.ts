@@ -3,6 +3,10 @@ import type {
   DishSlot,
   AdminStats,
   AdminRestaurant,
+  MenuScanResponse,
+  MenuScanStatusResponse,
+  MenuScanDraft,
+  MenuScanPublishResponse,
 } from '@menuar/types'
 
 // Empty string = use Vite proxy in dev (avoids CORS on HTTPS).
@@ -262,5 +266,39 @@ export async function subscribeToNewsletter(email: string): Promise<{ alreadySub
   return apiFetch('/api/v1/inquiry/newsletter', {
     method: 'POST',
     body: JSON.stringify({ email }),
+  })
+}
+
+// ─── Digital menu (Gemini OCR) ─────────────────────────────────────────────────
+
+export async function scanMenuPhotos(files: File[]): Promise<MenuScanResponse> {
+  const formData = new FormData()
+  files.forEach((f) => formData.append('photos', f))
+
+  const res = await fetch(`${API_URL}/api/v1/menu-scan`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  })
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: 'Menu scan failed' }))
+    throw new Error(body.error)
+  }
+
+  return res.json()
+}
+
+export async function getMenuScan(scanId: string): Promise<MenuScanStatusResponse> {
+  return apiFetch(`/api/v1/menu-scan/${scanId}`)
+}
+
+export async function publishMenuScan(
+  scanId: string,
+  draft: MenuScanDraft,
+): Promise<MenuScanPublishResponse> {
+  return apiFetch(`/api/v1/menu-scan/${scanId}/publish`, {
+    method: 'POST',
+    body: JSON.stringify(draft),
   })
 }
