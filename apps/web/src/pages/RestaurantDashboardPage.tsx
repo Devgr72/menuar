@@ -94,8 +94,8 @@ function Sidebar({ active, navigate, signOut }: { active: string; navigate: (p: 
     <div className="flex flex-col h-full bg-[#FFFFFF] border-r border-[#F1F5F9]">
       <div className="p-6">
         <div className="flex items-center gap-4 mb-10">
-          <img src="/dishdekho.jpeg" alt="DishDekho Logo" className="w-12 h-12 rounded-xl object-contain shadow-sm" />
-          <h1 className="font-fraunces font-bold text-xl text-[#1E293B]">DishDekho</h1>
+          <img src="/dishdekho-icon.png" alt="DishDekho Logo" className="w-12 h-12 rounded-xl object-contain bg-white p-0.5 shadow-sm" />
+          <h1 className="font-fraunces font-bold text-xl text-[#0F2747]">DishDekho</h1>
         </div>
 
         <nav className="space-y-1">
@@ -106,13 +106,13 @@ function Sidebar({ active, navigate, signOut }: { active: string; navigate: (p: 
               onClick={() => (item as any).active && navigate(item.id === 'dashboard' ? '/dashboard' : '/')}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                 active === item.id 
-                ? 'bg-[#F1F5F9] text-[#2C4A2C] shadow-sm' 
+                ? 'bg-[#F1F5F9] text-[#FF6B00] shadow-sm' 
                 : (item as any).active 
-                  ? 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#1E293B]'
+                  ? 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#0F2747]'
                   : 'text-[#CBD5E1] cursor-not-allowed opacity-60'
               }`}
             >
-              <span className={active === item.id ? 'text-[#2C4A2C]' : 'text-[#94A3B8]'}>{item.icon}</span>
+              <span className={active === item.id ? 'text-[#FF6B00]' : 'text-[#94A3B8]'}>{item.icon}</span>
               <span className="font-outfit font-medium text-sm">{item.label}</span>
             </button>
           ))}
@@ -141,7 +141,7 @@ function Sidebar({ active, navigate, signOut }: { active: string; navigate: (p: 
         onClick={() => setMobileOpen(true)}
         className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md border border-[#F1F5F9]"
       >
-        <svg className="w-6 h-6 text-[#1E293B]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+        <svg className="w-6 h-6 text-[#0F2747]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
       </button>
 
       {/* Mobile Drawer */}
@@ -172,7 +172,7 @@ export default function RestaurantDashboardPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FFFFFF]">
         <div className="text-center">
-          <div className="w-12 h-12 rounded-2xl border-2 border-[#2C4A2C] border-t-transparent animate-spin mx-auto mb-6" />
+          <div className="w-12 h-12 rounded-2xl border-2 border-[#FF6B00] border-t-transparent animate-spin mx-auto mb-6" />
           <p className="font-outfit text-[#64748B] font-medium tracking-wide">Orchestrating your experience…</p>
         </div>
       </div>
@@ -186,8 +186,8 @@ export default function RestaurantDashboardPage() {
           <div className="w-16 h-16 bg-[#FEF2F2] text-[#EF4444] rounded-full flex items-center justify-center mx-auto mb-6">
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
           </div>
-          <p className="font-outfit font-semibold text-[#1E293B] mb-2">{error}</p>
-          <button onClick={() => navigate('/select-plan')} className="text-sm font-medium text-[#2C4A2C] underline decoration-[#2C4A2C60] underline-offset-4">
+          <p className="font-outfit font-semibold text-[#0F2747] mb-2">{error}</p>
+          <button onClick={() => navigate('/select-plan')} className="text-sm font-medium text-[#FF6B00] underline decoration-[#FF6B0060] underline-offset-4">
             Manage subscription
           </button>
         </div>
@@ -256,8 +256,8 @@ function ProfileEditWrapper({
         {/* ── Welcome Header ─────────────────────────────────────────────────── */}
         <section className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <h2 className="font-fraunces text-4xl font-bold text-[#1E293B] mb-2">
-              Welcome back, <span className="text-[#2C4A2C]">{owner.ownerName.split(' ')[0]}</span>
+            <h2 className="font-fraunces text-4xl font-bold text-[#0F2747] mb-2">
+              Welcome back, <span className="text-[#FF6B00]">{owner.ownerName.split(' ')[0]}</span>
             </h2>
             <p className="font-outfit text-[#64748B] text-lg">
               Manage your digital menu and augmented reality presence.
@@ -270,7 +270,7 @@ function ProfileEditWrapper({
                 </div>
                 <div>
                   <p className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider">Live Status</p>
-                  <p className="font-outfit text-sm font-bold text-[#1E293B]">{liveCount}/{slots.length} Dishes Active</p>
+                  <p className="font-outfit text-sm font-bold text-[#0F2747]">{liveCount}/{slots.length} Dishes Active</p>
                 </div>
              </div>
           </div>
@@ -299,7 +299,7 @@ function ProfileEditWrapper({
           <div className="lg:col-span-8 space-y-8">
             <div className="bg-white rounded-3xl p-8 shadow-sm border border-[#F1F5F9]">
               <div className="flex items-center justify-between mb-8">
-                <h3 className="font-fraunces text-xl font-bold text-[#1E293B]">Table and Menu Engagement</h3>
+                <h3 className="font-fraunces text-xl font-bold text-[#0F2747]">Table and Menu Engagement</h3>
                 <span className="text-xs font-bold text-[#94A3B8] uppercase tracking-widest bg-[#F8FAFC] px-3 py-1 rounded-full">Automated Tool</span>
               </div>
               
@@ -319,7 +319,7 @@ function ProfileEditWrapper({
             {/* Dish Management Section */}
             <div>
               <div className="flex items-center justify-between mb-6">
-                <h3 className="font-fraunces text-2xl font-bold text-[#1E293B]">Dish Portfolio</h3>
+                <h3 className="font-fraunces text-2xl font-bold text-[#0F2747]">Dish Portfolio</h3>
                 <div className="flex items-center gap-4">
                   <div className="flex -space-x-2">
                     {slots.filter(s => s.status === 'glb_ready').slice(0, 3).map((_, i) => (
@@ -345,7 +345,7 @@ function ProfileEditWrapper({
 
           {/* Account/Admin Section (right) */}
           <div className="lg:col-span-4 space-y-8">
-            <div className="bg-[#1E293B] rounded-3xl p-8 text-white shadow-xl shadow-[#1E293B20]">
+            <div className="bg-[#0F2747] rounded-3xl p-8 text-white shadow-xl shadow-[#0F274720]">
               <div className="flex items-center justify-between mb-8">
                 <p className="font-fraunces text-lg font-bold">Admin Panel</p>
                 <button
@@ -392,11 +392,11 @@ function ProfileEditWrapper({
             </div>
 
             <div className="bg-white rounded-3xl p-8 shadow-sm border border-[#F1F5F9]">
-               <h4 className="font-fraunces font-bold text-[#1E293B] mb-4">Customer Support</h4>
-               <p className="text-sm text-[#64748B] font-outfit leading-relaxed mb-6">Need assistance with your 3D models or menu logic? Reach us at <span className="text-[#2C4A2C] font-bold">+91 9971381635</span></p>
+               <h4 className="font-fraunces font-bold text-[#0F2747] mb-4">Customer Support</h4>
+               <p className="text-sm text-[#64748B] font-outfit leading-relaxed mb-6">Need assistance with your 3D models or menu logic? Reach us at <span className="text-[#FF6B00] font-bold">+91 9971381635</span></p>
                <a 
                  href="tel:+919971381635"
-                 className="w-full flex items-center justify-center py-4 rounded-2xl border border-[#F1F5F9] font-outfit font-bold text-sm text-[#1E293B] hover:bg-[#F8FAFC] transition-colors"
+                 className="w-full flex items-center justify-center py-4 rounded-2xl border border-[#F1F5F9] font-outfit font-bold text-sm text-[#0F2747] hover:bg-[#F8FAFC] transition-colors"
                >
                  Call Support Now
                </a>
@@ -430,7 +430,7 @@ function AdminField({ label, value, editing, onChange }: { label: string; value:
           type="text" 
           value={value} 
           onChange={(e) => onChange(e.target.value)}
-          className="w-full bg-[#334155] border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#2C4A2C] outline-none"
+          className="w-full bg-[#334155] border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#FF6B00] outline-none"
         />
       ) : (
         <p className="font-outfit font-semibold text-lg">{value}</p>
@@ -490,7 +490,7 @@ function SlotCard({ slot, isHalted, onOpen }: { slot: DishSlot; isHalted: boolea
 
   return (
     <div
-      className="group bg-white rounded-[2rem] p-6 border border-[#F1F5F9] shadow-sm hover:shadow-xl hover:shadow-[#1e293b0a] transition-all duration-500 flex flex-col min-h-[280px]"
+      className="group bg-white rounded-[2rem] p-6 border border-[#F1F5F9] shadow-sm hover:shadow-xl hover:shadow-[#0F27470a] transition-all duration-500 flex flex-col min-h-[280px]"
       style={{ cursor: canUpload ? 'pointer' : 'default' }}
       onClick={canUpload ? onOpen : undefined}
     >
@@ -519,7 +519,7 @@ function SlotCard({ slot, isHalted, onOpen }: { slot: DishSlot; isHalted: boolea
                   </div>
                 )}
                 <div className="flex-1">
-                  <h4 className="font-fraunces text-xl font-bold text-[#1E293B] leading-tight group-hover:text-[#2C4A2C] transition-colors">
+                  <h4 className="font-fraunces text-xl font-bold text-[#0F2747] leading-tight group-hover:text-[#FF6B00] transition-colors">
                     {slot.dishName}
                   </h4>
                   {slot.description && (
@@ -565,7 +565,7 @@ function SlotCard({ slot, isHalted, onOpen }: { slot: DishSlot; isHalted: boolea
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="mt-6 w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-xs font-bold bg-[#1E293B] text-white hover:bg-[#2C4A2C] shadow-lg shadow-[#1e293b20] transition-all duration-300 transform active:scale-95"
+          className="mt-6 w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-xs font-bold bg-[#0F2747] text-white hover:bg-[#FF6B00] shadow-lg shadow-[#0F274720] transition-all duration-300 transform active:scale-95"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor font-bold"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
           View 3D Model

@@ -65,7 +65,8 @@ export default function MenuARPage() {
     return (
       <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#1E293B]/10 border-t-[#1E293B] rounded-full animate-spin mx-auto mb-6" />
+          <img src="/dishdekho-logo.png" alt="DishDekho" className="w-36 h-auto mx-auto mb-8" />
+          <div className="w-12 h-12 border-4 border-[#0F2747]/10 border-t-[#0F2747] rounded-full animate-spin mx-auto mb-6" />
           <p className="font-outfit text-[#64748B] text-sm font-medium tracking-wide">Preparing your menu…</p>
         </div>
       </div>
@@ -92,15 +93,15 @@ export default function MenuARPage() {
       <header className="sticky top-0 z-50 bg-[#FAFAFA]/80 backdrop-blur-xl border-b border-[#F1F5F9] px-6 py-5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-white border border-[#F1F5F9] shadow-sm flex items-center justify-center overflow-hidden">
-            <img src="/dishdekho.jpeg" alt="Logo" className="w-full h-full object-contain p-1.5" />
+            <img src="/dishdekho-icon.png" alt="DishDekho" className="w-full h-full object-contain p-1.5" />
           </div>
           <div>
-            <h1 className="font-fraunces font-bold text-lg text-[#1E293B] leading-none">{restaurant.name}</h1>
+            <h1 className="font-fraunces font-bold text-lg text-[#0F2747] leading-none">{restaurant.name}</h1>
             <p className="font-outfit text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest mt-1">Live digital menu</p>
           </div>
         </div>
         {tableId && (
-          <div className="bg-[#1E293B] px-3 py-1.5 rounded-xl border border-[#334155] shadow-lg">
+          <div className="bg-[#0F2747] px-3 py-1.5 rounded-xl border border-[#334155] shadow-lg">
             <p className="text-white text-[10px] font-black tracking-widest uppercase">Table {tableId}</p>
           </div>
         )}
@@ -108,12 +109,12 @@ export default function MenuARPage() {
 
       {/* ── Hero / Welcome ────────────────────────────────────────────────── */}
       <section className="px-6 pt-10 pb-6">
-        <span className="inline-block px-3 py-1 rounded-full bg-[#2C4A2C]/5 text-[#2C4A2C] text-[10px] font-bold uppercase tracking-[0.2em] mb-4">
+        <span className="inline-block px-3 py-1 rounded-full bg-[#FF6B00]/5 text-[#FF6B00] text-[10px] font-bold uppercase tracking-[0.2em] mb-4">
           Interactive Dining
         </span>
-        <h2 className="font-fraunces text-4xl font-bold text-[#1E293B] leading-[1.1] mb-3">
+        <h2 className="font-fraunces text-4xl font-bold text-[#0F2747] leading-[1.1] mb-3">
           Experience Food <br />
-          <span className="text-[#2C4A2C]">Before You Order.</span>
+          <span className="text-[#FF6B00]">Before You Order.</span>
         </h2>
         <p className="text-[#64748B] text-sm leading-relaxed max-w-[280px]">
           Scan, view, and interact with our signature dishes in augmented reality.
@@ -123,9 +124,9 @@ export default function MenuARPage() {
       {/* ── Menu List ───────────────────────────────────────────────────── */}
       <main className="flex-1 px-6 pt-4 space-y-4">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="font-fraunces font-bold text-xl text-[#1E293B]">Signature Dishes</h3>
-          <div className="w-8 h-8 rounded-full bg-[#1E293B]/5 flex items-center justify-center">
-             <span className="text-xs font-bold text-[#1E293B]">{dishes.length}</span>
+          <h3 className="font-fraunces font-bold text-xl text-[#0F2747]">Signature Dishes</h3>
+          <div className="w-8 h-8 rounded-full bg-[#0F2747]/5 flex items-center justify-center">
+             <span className="text-xs font-bold text-[#0F2747]">{dishes.length}</span>
           </div>
         </div>
 
@@ -147,9 +148,9 @@ export default function MenuARPage() {
 
       {/* ── Footer Branding ──────────────────────────────────────────────── */}
       <footer className="mt-12 px-6 pb-8 text-center">
-        <div className="flex flex-col items-center gap-2 opacity-40">
-           <img src="/dishdekho.jpeg" alt="DishDekho" className="w-8 h-8 rounded-lg grayscale" />
-           <p className="text-[10px] font-bold text-[#1E293B] uppercase tracking-[0.3em]">Powered by DishDekho</p>
+        <div className="flex flex-col items-center gap-3 opacity-50">
+           <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-[0.3em]">Powered by</p>
+           <img src="/dishdekho-logo.png" alt="DishDekho — Scan. Explore in AR. Order. Enjoy." className="w-32 h-auto" />
         </div>
       </footer>
 

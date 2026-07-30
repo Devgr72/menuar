@@ -14,7 +14,7 @@ interface Props {
 }
 
 const Spinner = () => (
-  <div className="min-h-screen bg-[#07090f] flex items-center justify-center">
+  <div className="min-h-screen bg-[#0F2747] flex items-center justify-center">
     <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
   </div>
 )

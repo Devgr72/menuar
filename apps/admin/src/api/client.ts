@@ -1,4 +1,4 @@
-import type { AdminStats, AdminRestaurant, DishSlot } from '@menuar/types'
+import type { AdminStats, AdminRestaurant, DishSlot, Inquiry, InquiryStatus } from '@menuar/types'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || ''
 
@@ -98,4 +98,29 @@ export async function getAdminEvents(token: string) {
 
 export async function regenerateQR(token: string, restaurantId: string): Promise<{ qrUrl: string; arUrl: string }> {
   return apiFetch(`/api/v1/admin/restaurants/${restaurantId}/regenerate-qr`, { method: 'POST', token })
+}
+
+// ─── Inquiries ────────────────────────────────────────────────────────────────
+
+export async function getAdminInquiries(
+  token: string,
+  params?: { type?: 'contact' | 'newsletter'; status?: InquiryStatus; page?: number },
+): Promise<{ data: Inquiry[]; total: number; page: number; limit: number }> {
+  const qs = new URLSearchParams()
+  if (params?.type) qs.set('type', params.type)
+  if (params?.status) qs.set('status', params.status)
+  if (params?.page) qs.set('page', String(params.page))
+  return apiFetch(`/api/v1/admin/inquiries?${qs}`, { token })
+}
+
+export async function updateInquiryStatus(
+  token: string,
+  id: string,
+  status: InquiryStatus,
+): Promise<{ inquiry: Inquiry }> {
+  return apiFetch(`/api/v1/admin/inquiries/${id}`, {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify({ status }),
+  })
 }

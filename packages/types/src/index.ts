@@ -153,6 +153,23 @@ export interface AdminStats {
   totalPaid: number;
   leads: number;
   totalQrScans: number;
+  newInquiries: number;
+}
+
+/** A landing-page contact submission or newsletter sign-up. */
+export type InquiryType = 'contact' | 'newsletter';
+export type InquiryStatus = 'new' | 'read' | 'archived';
+
+export interface Inquiry {
+  id: string;
+  type: InquiryType;
+  name: string | null;
+  email: string;
+  phone: string | null;
+  subject: string | null;
+  message: string | null;
+  status: InquiryStatus;
+  createdAt: string;
 }
 
 export interface AdminRestaurant {

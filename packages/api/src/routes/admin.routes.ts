@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { Restaurant, RestaurantOwner, Subscription, DishSlot, PaymentEvent } from '../db/models/index.js';
+import { Restaurant, RestaurantOwner, Subscription, DishSlot, PaymentEvent, Inquiry } from '../db/models/index.js';
 import { requireAdminAuth } from '../middleware/auth.js';
 import { saveFile, deleteFile } from '../services/storage.service.js';
 import { z } from 'zod';
@@ -52,10 +52,11 @@ router.post('/login', async (req, res) => {
 
 /** GET /api/v1/admin/stats */
 router.get('/stats', requireAdminAuth, async (_req, res) => {
-  const [totalRegistered, totalPaid, scanAgg] = await Promise.all([
+  const [totalRegistered, totalPaid, scanAgg, newInquiries] = await Promise.all([
     RestaurantOwner.countDocuments(),
     Subscription.countDocuments({ status: 'active' }),
     Restaurant.aggregate([{ $group: { _id: null, total: { $sum: '$scanCount' } } }]),
+    Inquiry.countDocuments({ status: 'new' }),
   ]);
 
   res.json({
@@ -63,7 +64,55 @@ router.get('/stats', requireAdminAuth, async (_req, res) => {
     totalPaid,
     leads: totalRegistered - totalPaid,
     totalQrScans: scanAgg[0]?.total ?? 0,
+    newInquiries,
   });
+});
+
+/** GET /api/v1/admin/inquiries — contact form messages and newsletter sign-ups */
+router.get('/inquiries', requireAdminAuth, async (req, res) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+  const { type, status } = req.query as { type?: string; status?: string };
+
+  const filter: Record<string, unknown> = {};
+  if (type === 'contact' || type === 'newsletter') filter.type = type;
+  if (status === 'new' || status === 'read' || status === 'archived') filter.status = status;
+
+  const [inquiries, total] = await Promise.all([
+    Inquiry.find(filter)
+      .select('-ip')
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+    Inquiry.countDocuments(filter),
+  ]);
+
+  res.json({ data: toIds(inquiries), total, page, limit });
+});
+
+/** PATCH /api/v1/admin/inquiries/:id — mark read or archived */
+router.patch('/inquiries/:id', requireAdminAuth, async (req, res) => {
+  const parsed = z.object({ status: z.enum(['new', 'read', 'archived']) }).safeParse(req.body ?? {});
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid status', code: 'INVALID_INPUT' });
+    return;
+  }
+
+  const updated = await Inquiry.findByIdAndUpdate(
+    req.params.id,
+    { status: parsed.data.status },
+    { new: true },
+  )
+    .select('-ip')
+    .lean();
+
+  if (!updated) {
+    res.status(404).json({ error: 'Inquiry not found', code: 'NOT_FOUND' });
+    return;
+  }
+
+  res.json({ inquiry: toId(updated) });
 });
 
 /** GET /api/v1/admin/restaurants */

@@ -79,6 +79,7 @@ async function main() {
   const { default: restaurantRoutes } = await import('./routes/restaurant.routes.js');
   const { default: adminRoutes } = await import('./routes/admin.routes.js');
   const { default: webhookRoutes } = await import('./routes/webhook.routes.js');
+  const { default: inquiryRoutes } = await import('./routes/inquiry.routes.js');
   const { startPoller } = await import('./services/pipeline.service.js');
 
   app.use('/api/v1/menu', menuRoutes);
@@ -88,6 +89,7 @@ async function main() {
   app.use('/api/v1/restaurant', restaurantRoutes);
   app.use('/api/v1/admin', adminRoutes);
   app.use('/api/v1/webhook', webhookRoutes);
+  app.use('/api/v1/inquiry', inquiryRoutes);
 
   // Dev-only manual activation route (never mounted in production)
   if (IS_DEV) {
@@ -115,7 +117,10 @@ async function main() {
   console.log('  GET  /api/v1/subscription/status');
   console.log('  GET  /api/v1/restaurant/dashboard');
   console.log('  POST /api/v1/restaurant/slots/:n/photos');
+  console.log('  POST /api/v1/inquiry/contact');
+  console.log('  POST /api/v1/inquiry/newsletter');
   console.log('  GET  /api/v1/admin/stats');
+  console.log('  GET  /api/v1/admin/inquiries');
   console.log('  GET  /api/v1/admin/restaurants');
   console.log('  POST /api/v1/admin/slots/:slotId/glb');
   console.log('  POST /api/v1/webhook/razorpay');

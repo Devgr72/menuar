@@ -5,15 +5,22 @@ function LoadingScreen() {
     <div style={{
       minHeight: '100vh',
       display: 'flex',
+      flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      background: '#07090f',
+      gap: 28,
+      background: '#0F2747',
     }}>
+      <img
+        src="/dishdekho-icon.png"
+        alt="DishDekho"
+        style={{ width: 56, height: 56, objectFit: 'contain', background: '#fff', borderRadius: 16, padding: 6 }}
+      />
       <div style={{
         width: 36,
         height: 36,
-        border: '3px solid rgba(107,60,255,0.2)',
-        borderTop: '3px solid #6b3cff',
+        border: '3px solid rgba(255,255,255,0.2)',
+        borderTop: '3px solid #FF6B00',
         borderRadius: '50%',
         animation: 'spin 0.8s linear infinite',
       }} />
@@ -21,6 +28,10 @@ function LoadingScreen() {
     </div>
   )
 }
+import LandingPage from './pages/LandingPage'
+import LegalPage from './pages/LegalPage'
+import { PRIVACY_POLICY, TERMS_AND_CONDITIONS } from './constants/legal'
+import NotFoundPage from './pages/NotFoundPage'
 import MenuARPage from './pages/MenuARPage'
 import AuthPage from './pages/AuthPage'
 import OnboardingPage from './pages/OnboardingPage'
@@ -29,19 +40,6 @@ import PaymentCallbackPage from './pages/PaymentCallbackPage'
 import RestaurantDashboardPage from './pages/RestaurantDashboardPage'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import { useAuthState } from './hooks/useAuthState'
-
-/**
- * Smart root redirect — consults full lifecycle state so a returning signed-in
- * user lands on the right page instead of blindly going to /dashboard.
- */
-function RootRedirect() {
-  const { status } = useAuthState()
-  if (status === 'loading') return <LoadingScreen />
-  if (status === 'unauthenticated')   return <Navigate to="/sign-in" replace />
-  if (status === 'needs_onboarding')  return <Navigate to="/onboarding" replace />
-  if (status === 'needs_payment')     return <Navigate to="/select-plan" replace />
-  return <Navigate to="/dashboard" replace />
-}
 
 /**
  * Guards /sign-in and /sign-up: redirects already-authenticated users to
@@ -60,6 +58,11 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public marketing site */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/privacy" element={<LegalPage doc={PRIVACY_POLICY} />} />
+        <Route path="/terms" element={<LegalPage doc={TERMS_AND_CONDITIONS} />} />
+
         {/* Public AR experience */}
         <Route path="/ar/:restaurantSlug" element={<MenuARPage />} />
         <Route path="/ar" element={<MenuARPage />} />
@@ -106,8 +109,7 @@ export default function App() {
           }
         />
 
-        {/* Root: smart redirect based on full lifecycle state */}
-        <Route path="/" element={<RootRedirect />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   )

@@ -26,7 +26,7 @@ export default function MenuDishCard({ dish, onClick }: MenuDishCardProps) {
         )}
         {dish.price > 0 && (
           <div className="absolute top-1 right-1 bg-white/90 backdrop-blur-sm px-1.5 py-0.5 rounded-lg border border-[#F1F5F9]">
-            <p className="text-[10px] font-bold text-[#1E293B]">₹{dish.price}</p>
+            <p className="text-[10px] font-bold text-[#0F2747]">₹{dish.price}</p>
           </div>
         )}
       </div>
@@ -38,7 +38,7 @@ export default function MenuDishCard({ dish, onClick }: MenuDishCardProps) {
                 <div className={`w-1.5 h-1.5 rounded-full ${dish.isVeg ? 'bg-green-600' : 'bg-red-600'}`} />
              </div>
           )}
-          <h3 className="font-fraunces font-bold text-lg text-[#1E293B] truncate">{dish.name}</h3>
+          <h3 className="font-fraunces font-bold text-lg text-[#0F2747] truncate">{dish.name}</h3>
         </div>
         <p className="font-outfit text-xs text-[#64748B] line-clamp-2 leading-relaxed">
           {dish.description || 'Deliciously crafted for your table.'}
@@ -46,7 +46,7 @@ export default function MenuDishCard({ dish, onClick }: MenuDishCardProps) {
       </div>
 
       <div className="flex-none flex items-center pr-2">
-        <div className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center text-[#94A3B8] group-hover:bg-[#2C4A2C] group-hover:text-white transition-colors duration-300">
+        <div className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center text-[#94A3B8] group-hover:bg-[#FF6B00] group-hover:text-white transition-colors duration-300">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
           </svg>

@@ -31,7 +31,7 @@ export default function QRCodeDisplay({ qrUrl, restaurantName, slug }: Props) {
   }
 
   return (
-    <div className="bg-[#F8FAFC] rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-8 border border-[#F1F5F9] transition-all hover:bg-white hover:shadow-lg hover:shadow-[#1e293b05]">
+    <div className="bg-[#F8FAFC] rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-8 border border-[#F1F5F9] transition-all hover:bg-white hover:shadow-lg hover:shadow-[#0F274705]">
       {/* QR Image */}
       <div className="flex-none bg-white rounded-3xl p-5 shadow-sm border border-[#F1F5F9] transform transition-transform group-hover:scale-105">
         <img src={qrUrl} alt="Restaurant QR code" className="w-32 h-32 object-contain" />
@@ -40,9 +40,9 @@ export default function QRCodeDisplay({ qrUrl, restaurantName, slug }: Props) {
       {/* Info + download */}
       <div className="flex-1 text-center sm:text-left space-y-4">
         <div>
-          <h3 className="font-fraunces font-bold text-xl text-[#1E293B]">Table Engine QR</h3>
+          <h3 className="font-fraunces font-bold text-xl text-[#0F2747]">Table Engine QR</h3>
           <p className="font-outfit text-sm text-[#64748B] font-medium mt-1">
-            Linked to: <span className="text-[#2C4A2C] font-semibold">{restaurantName}</span>
+            Linked to: <span className="text-[#FF6B00] font-semibold">{restaurantName}</span>
           </p>
         </div>
         
@@ -55,8 +55,8 @@ export default function QRCodeDisplay({ qrUrl, restaurantName, slug }: Props) {
           disabled={downloading}
           className={`inline-flex items-center gap-3 px-6 py-3 rounded-2xl font-outfit font-bold text-sm transition-all shadow-lg active:scale-95 disabled:opacity-70 ${
             downloading 
-              ? 'bg-[#1E293B] text-white' 
-              : 'bg-[#2C4A2C] text-white hover:bg-[#1E293B] shadow-[#2c4a2c20]'
+              ? 'bg-[#0F2747] text-white' 
+              : 'bg-[#FF6B00] text-white hover:bg-[#0F2747] shadow-[#FF6B0020]'
           }`}
         >
           {downloading ? (

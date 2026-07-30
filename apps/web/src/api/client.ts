@@ -238,3 +238,29 @@ export async function recordQRScan(restaurantSlug: string): Promise<void> {
   // Fire-and-forget — don't await in calling code
   fetch(`${API_URL}/api/v1/menu/${restaurantSlug}/scan`, { method: 'POST' }).catch(() => {})
 }
+
+// ─── Landing page inquiries ───────────────────────────────────────────────────
+
+export interface ContactInquiryInput {
+  name: string
+  email: string
+  phone: string
+  subject: string
+  message: string
+}
+
+/** Saves a "Contact Us" submission so it shows up in the admin panel. */
+export async function submitContactInquiry(input: ContactInquiryInput): Promise<{ id: string }> {
+  return apiFetch('/api/v1/inquiry/contact', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+/** Adds an address to the newsletter list. Re-subscribing is a no-op, not an error. */
+export async function subscribeToNewsletter(email: string): Promise<{ alreadySubscribed: boolean }> {
+  return apiFetch('/api/v1/inquiry/newsletter', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+}

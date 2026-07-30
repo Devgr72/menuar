@@ -86,19 +86,19 @@ export default function PaymentCallbackPage() {
   return (
     <div
       className="min-h-screen font-poppins flex flex-col"
-      style={{ background: 'linear-gradient(135deg, #f0f7ff 0%, #f8fafc 60%, #fff7ed 100%)' }}
+      style={{ background: 'linear-gradient(135deg, #FFF8F3 0%, #FFFFFF 55%, #FFF1E6 100%)' }}
     >
       {/* Header */}
       <header className="flex items-center gap-3 px-6 py-5 bg-white/70 backdrop-blur-md border-b border-slate-200/60">
         <img
-          src="/dishdekho.jpeg"
+          src="/dishdekho-icon.png"
           alt="DishDekho"
-          className="h-9 w-9 rounded-xl object-cover border border-slate-100"
+          className="h-9 w-9 rounded-xl object-contain bg-white p-0.5 border border-slate-100"
           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
         />
         <p className="text-[1.15rem] font-extrabold">
-          <span className="text-amber-500">Dish</span>
-          <span className="text-slate-900">Dekho</span>
+          <span className="text-[#FF6B00]">Dish</span>
+          <span className="text-[#0F2747]">Dekho</span>
         </p>
       </header>
 
@@ -112,7 +112,7 @@ export default function PaymentCallbackPage() {
               <>
                 <div className="w-16 h-16 mx-auto mb-6 relative">
                   <div className="w-16 h-16 border-4 border-slate-100 rounded-full" />
-                  <div className="absolute inset-0 w-16 h-16 border-4 border-[#2563eb] border-t-transparent rounded-full animate-spin" />
+                  <div className="absolute inset-0 w-16 h-16 border-4 border-[#FF6B00] border-t-transparent rounded-full animate-spin" />
                   <div className="absolute inset-0 flex items-center justify-center text-xl">💳</div>
                 </div>
                 <h2 className="text-xl font-bold text-slate-800 mb-2">Processing your payment{dots}</h2>
@@ -120,18 +120,18 @@ export default function PaymentCallbackPage() {
                   Please wait while we confirm your payment.<br />
                   This usually takes a few seconds.
                 </p>
-                <div className="mt-6 bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 text-left">
-                  <p className="text-blue-700 text-xs font-bold uppercase tracking-wider mb-2">What happens next</p>
+                <div className="mt-6 bg-[#FFF1E6] border border-[#FFE6D2] rounded-2xl px-5 py-4 text-left">
+                  <p className="text-[#E85F00] text-xs font-bold uppercase tracking-wider mb-2">What happens next</p>
                   {[
                     'Payment is verified by Razorpay',
                     'Your subscription gets activated',
                     'You\'re redirected to your dashboard',
                   ].map((step, i) => (
                     <div key={step} className="flex items-center gap-2.5 mt-2">
-                      <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-bold shrink-0">
+                      <div className="w-5 h-5 rounded-full bg-[#FFF1E6] text-[#FF6B00] flex items-center justify-center text-[10px] font-bold shrink-0">
                         {i + 1}
                       </div>
-                      <span className="text-blue-600 text-xs font-medium">{step}</span>
+                      <span className="text-[#FF6B00] text-xs font-medium">{step}</span>
                     </div>
                   ))}
                 </div>
@@ -161,15 +161,15 @@ export default function PaymentCallbackPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h2 className="text-2xl font-extrabold text-slate-900 mb-2">You're all set! 🎉</h2>
+                <h2 className="text-2xl font-extrabold text-[#0F2747] mb-2">You're all set! 🎉</h2>
                 <p className="text-slate-500 text-sm mb-6">
                   Welcome to DishDekho. Your subscription is active.<br />
                   Redirecting to your dashboard…
                 </p>
                 <div className="flex items-center gap-2 justify-center">
-                  <div className="w-2 h-2 rounded-full bg-[#2563eb] animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-2 h-2 rounded-full bg-[#2563eb] animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-2 h-2 rounded-full bg-[#2563eb] animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <div className="w-2 h-2 rounded-full bg-[#FF6B00] animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 rounded-full bg-[#FF6B00] animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 rounded-full bg-[#FF6B00] animate-bounce" style={{ animationDelay: '300ms' }} />
                 </div>
               </>
             )}
@@ -177,7 +177,7 @@ export default function PaymentCallbackPage() {
             {/* ── PENDING (timed out) ── */}
             {state === 'pending' && (
               <>
-                <div className="w-16 h-16 mx-auto mb-6 bg-amber-50 rounded-full flex items-center justify-center text-3xl border-4 border-amber-100">
+                <div className="w-16 h-16 mx-auto mb-6 bg-[#FFF8F3] rounded-full flex items-center justify-center text-3xl border-4 border-[#FFE6D2]">
                   ⏳
                 </div>
                 <h2 className="text-xl font-bold text-slate-800 mb-2">Still processing…</h2>
@@ -188,7 +188,7 @@ export default function PaymentCallbackPage() {
                 <div className="flex flex-col gap-3">
                   <button
                     onClick={() => navigate('/dashboard')}
-                    className="w-full bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold rounded-xl py-3 text-sm transition-colors"
+                    className="w-full bg-[#FF6B00] hover:bg-[#E85F00] text-white font-semibold rounded-xl py-3 text-sm transition-colors"
                   >
                     Go to Dashboard
                   </button>
@@ -216,7 +216,7 @@ export default function PaymentCallbackPage() {
                 <button
                   onClick={handleRetry}
                   disabled={retrying}
-                  className="w-full bg-[#2563eb] hover:bg-[#1d4ed8] disabled:bg-slate-300 text-white font-semibold rounded-xl py-3 text-sm transition-colors"
+                  className="w-full bg-[#FF6B00] hover:bg-[#E85F00] disabled:bg-slate-300 text-white font-semibold rounded-xl py-3 text-sm transition-colors"
                 >
                   {retrying ? 'Opening checkout…' : 'Retry Payment'}
                 </button>
@@ -237,7 +237,7 @@ export default function PaymentCallbackPage() {
                 <div className="flex flex-col gap-3">
                   <button
                     onClick={() => navigate('/select-plan')}
-                    className="w-full bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold rounded-xl py-3 text-sm transition-colors"
+                    className="w-full bg-[#FF6B00] hover:bg-[#E85F00] text-white font-semibold rounded-xl py-3 text-sm transition-colors"
                   >
                     Try Again
                   </button>

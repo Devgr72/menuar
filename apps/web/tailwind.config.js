@@ -15,6 +15,18 @@ export default {
         outfit:    ['Outfit', 'sans-serif'],
       },
       colors: {
+        /* DishDekho marketing site palette */
+        dd: {
+          orange:      '#FF6B00',
+          'orange-dk': '#E85F00',
+          'orange-lt': '#FFF1E6',
+          navy:        '#0F2747',
+          'navy-lt':   '#1B3A63',
+          ink:         '#111827',
+          muted:       '#5B6B7F',
+          soft:        '#FFF8F3',
+          line:        '#EAEAEA',
+        },
         brand: {
           navy:    '#0f2356',
           blue:    '#1a3a8f',
@@ -51,6 +63,20 @@ export default {
       },
       backgroundImage: {
         'brand-gradient': 'linear-gradient(135deg, #0f2356 0%, #1a3a8f 50%, #2563eb 100%)',
+      },
+      borderRadius: {
+        card: '20px',
+        btn:  '12px',
+      },
+      maxWidth: {
+        container: '1280px',
+      },
+      boxShadow: {
+        card:        '0 4px 24px rgba(15,39,71,0.06)',
+        'card-hover':'0 14px 40px rgba(15,39,71,0.12)',
+        soft:        '0 2px 14px rgba(15,39,71,0.05)',
+        btn:         '0 8px 20px rgba(255,107,0,0.28)',
+        phone:       '0 30px 60px rgba(15,39,71,0.28)',
       },
       keyframes: {
         float: {
