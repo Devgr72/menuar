@@ -80,6 +80,7 @@ async function main() {
   const { default: adminRoutes } = await import('./routes/admin.routes.js');
   const { default: webhookRoutes } = await import('./routes/webhook.routes.js');
   const { default: inquiryRoutes } = await import('./routes/inquiry.routes.js');
+  const { default: menuScanRoutes } = await import('./routes/menuScan.routes.js');
   const { startPoller } = await import('./services/pipeline.service.js');
 
   app.use('/api/v1/menu', menuRoutes);
@@ -90,6 +91,7 @@ async function main() {
   app.use('/api/v1/admin', adminRoutes);
   app.use('/api/v1/webhook', webhookRoutes);
   app.use('/api/v1/inquiry', inquiryRoutes);
+  app.use('/api/v1/menu-scan', menuScanRoutes);
 
   // Dev-only manual activation route (never mounted in production)
   if (IS_DEV) {
@@ -119,6 +121,9 @@ async function main() {
   console.log('  POST /api/v1/restaurant/slots/:n/photos');
   console.log('  POST /api/v1/inquiry/contact');
   console.log('  POST /api/v1/inquiry/newsletter');
+  console.log('  POST /api/v1/menu-scan');
+  console.log('  GET  /api/v1/menu-scan/:id');
+  console.log('  POST /api/v1/menu-scan/:id/publish');
   console.log('  GET  /api/v1/admin/stats');
   console.log('  GET  /api/v1/admin/inquiries');
   console.log('  GET  /api/v1/admin/restaurants');
