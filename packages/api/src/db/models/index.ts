@@ -11,3 +11,4 @@ export { DishPhoto } from './DishPhoto.js';
 export { DishView } from './DishView.js';
 export { QrCode } from './QrCode.js';
 export { Inquiry } from './Inquiry.js';
+export { MenuScan } from './MenuScan.js';

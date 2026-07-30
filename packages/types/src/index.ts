@@ -81,6 +81,7 @@ export interface Dish {
   isVeg: boolean;
   spiceLevel: number; // 0=none 1=mild 2=medium 3=hot
   allergens: string[];
+  ingredients?: string[];
   isAvailable: boolean;
   modelUrl?: string;
   thumbnailUrl?: string;
@@ -178,4 +179,41 @@ export interface AdminRestaurant {
   subscription: Subscription | null;
   slotsReady: number;
   slotsWithPhotos: number;
+}
+
+// ─── Digital menu scan (Gemini OCR) ──────────────────────────────────────────
+
+export interface MenuScanDish {
+  name: string;
+  description: string;
+  price: number;
+  ingredients: string[];
+  isVeg: boolean;
+}
+
+export interface MenuScanCategory {
+  name: string;
+  dishes: MenuScanDish[];
+}
+
+export interface MenuScanDraft {
+  categories: MenuScanCategory[];
+}
+
+export type MenuScanStatus = 'ready' | 'published' | 'discarded';
+
+export interface MenuScanResponse {
+  scanId: string;
+  draft: MenuScanDraft;
+}
+
+export interface MenuScanStatusResponse {
+  scanId: string;
+  status: MenuScanStatus;
+  draft: MenuScanDraft;
+}
+
+export interface MenuScanPublishResponse {
+  categoriesCreated: number;
+  dishesCreated: number;
 }

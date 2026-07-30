@@ -13,6 +13,7 @@ export interface IDish {
   isVeg: boolean;
   spiceLevel: number;
   allergens: string[];
+  ingredients: string[];
   isAvailable: boolean;
   modelUrl?: string;
   thumbnailUrl?: string;
@@ -33,6 +34,7 @@ const dishSchema = new Schema(
     isVeg: { type: Boolean, default: false },
     spiceLevel: { type: Number, default: 0 },
     allergens: { type: [String], default: [] },
+    ingredients: { type: [String], default: [] },
     isAvailable: { type: Boolean, default: true },
     modelUrl: { type: String },
     thumbnailUrl: { type: String },
