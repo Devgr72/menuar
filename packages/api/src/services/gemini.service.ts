@@ -97,7 +97,14 @@ const FILE_ACTIVE_POLL_TIMEOUT_MS = 15_000;
 async function waitForFileActive(ai: GoogleGenAI, fileName: string): Promise<void> {
   const deadline = Date.now() + FILE_ACTIVE_POLL_TIMEOUT_MS;
   while (Date.now() < deadline) {
-    const file = await ai.files.get({ name: fileName });
+    let file;
+    try {
+      file = await ai.files.get({ name: fileName });
+    } catch (err) {
+      throw new GeminiExtractionError(
+        `Gemini file status check failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
     if (file.state === FileState.ACTIVE) return;
     if (file.state === FileState.FAILED) {
       throw new GeminiExtractionError(`Gemini failed to process an uploaded photo: ${fileName}`);
@@ -117,14 +124,21 @@ export async function extractMenuFromPhotos(
 
   const ai = getGeminiClient();
 
-  const uploaded = await Promise.all(
-    photos.map((photo, i) =>
-      ai.files.upload({
-        file: new Blob([new Uint8Array(photo.buffer)], { type: photo.mimeType }),
-        config: { mimeType: photo.mimeType, displayName: `menu-page-${i + 1}` },
-      }),
-    ),
-  );
+  let uploaded;
+  try {
+    uploaded = await Promise.all(
+      photos.map((photo, i) =>
+        ai.files.upload({
+          file: new Blob([new Uint8Array(photo.buffer)], { type: photo.mimeType }),
+          config: { mimeType: photo.mimeType, displayName: `menu-page-${i + 1}` },
+        }),
+      ),
+    );
+  } catch (err) {
+    throw new GeminiExtractionError(
+      `Gemini file upload failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
 
   for (const file of uploaded) {
     if (!file.name) throw new GeminiExtractionError('Gemini did not return a file name after upload');
