@@ -21,14 +21,14 @@ export default function Partner() {
           Become a <Accent>Partner</Accent> &amp; <Accent>Earn Commission</Accent>!
         </SectionHeading>
 
-        <ul className="mt-9 grid gap-8 md:grid-cols-3 md:gap-0 lg:mt-11">
+        <ul className="mt-9 grid gap-8 lg:mt-11 lg:grid-cols-3 lg:gap-0">
           {PARTNER_STEPS.map(({ icon: Icon, title, lines }, i) => (
             <Reveal
               as="li"
               key={title}
               delay={i * 0.09}
-              className={`flex items-start gap-4 px-2 md:px-8 ${
-                i > 0 ? 'md:border-l md:border-[#E7D5C4]' : ''
+              className={`flex items-start gap-4 px-2 lg:px-8 ${
+                i > 0 ? 'lg:border-l lg:border-[#E7D5C4]' : ''
               }`}
             >
               <Icon className="h-10 w-10 flex-none text-dd-orange" strokeWidth={1.4} />

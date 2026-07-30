@@ -157,7 +157,7 @@ export default function ContactSection() {
               {errors.message && <ErrorText>{errors.message.message}</ErrorText>}
             </div>
 
-            <div className="mt-5 flex flex-wrap items-center gap-4">
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-4 sm:justify-start">
               <Button type="submit" size="lg" disabled={isSubmitting} className="min-w-[190px]">
                 {isSubmitting ? 'Sending…' : 'Send Message'}
                 <Send className="h-4 w-4" />

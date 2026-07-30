@@ -18,7 +18,7 @@ export default function Faq() {
           Frequently Asked <Accent>Questions</Accent>
         </SectionHeading>
 
-        <div className="mt-9 grid gap-x-6 gap-y-3 lg:mt-11 lg:grid-cols-2">
+        <div className="mt-9 grid gap-x-6 gap-y-3 md:grid-cols-2 lg:mt-11">
           {columns.map((column, colIndex) => (
             <ul key={colIndex} className="space-y-3">
               {column.map((faq, i) => {

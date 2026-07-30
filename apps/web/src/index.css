@@ -13,6 +13,12 @@ html, body, #root {
   scroll-behavior: smooth;
 }
 
+/* Safety net against sideways scroll on narrow screens. `clip` rather than
+   `hidden` — hidden would make body a scroll container and break the sticky navbar. */
+body {
+  overflow-x: clip;
+}
+
 h1, h2, h3, h4, .font-poppins {
   font-family: 'Poppins', sans-serif;
 }

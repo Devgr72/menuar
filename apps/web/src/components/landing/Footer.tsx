@@ -29,15 +29,22 @@ export default function Footer() {
   return (
     <footer className="bg-dd-navy text-white">
       <div className="dd-container py-14 lg:py-16">
-        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1.4fr] lg:gap-10">
+        {/* Two link columns sit side by side even on phones; the brand block and
+            newsletter span the full width above and below them. */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-9 lg:grid-cols-[1.6fr_1fr_1fr_1.4fr] lg:gap-10">
           {/* Brand */}
-          <div>
-            <img src="/images/logo-light.png" alt="DishDekho" className="h-[58px] w-auto" />
-            <p className="mt-5 max-w-[280px] text-[13px] leading-[1.85] text-white/60">
+          {/* Centred while it spans the full width; left-aligned once it is a column */}
+          <div className="col-span-2 text-center lg:col-span-1 lg:text-left">
+            <img
+              src="/images/logo-light.png"
+              alt="DishDekho"
+              className="mx-auto h-[58px] w-auto lg:mx-0"
+            />
+            <p className="mx-auto mt-5 max-w-[300px] text-[13px] leading-[1.85] text-white/60 lg:mx-0 lg:max-w-[280px]">
               Empowering restaurants with AR Menu and Digital Menu to deliver exceptional dining
               experiences.
             </p>
-            <ul className="mt-6 flex gap-3">
+            <ul className="mt-6 flex justify-center gap-3 lg:justify-start">
               {SOCIAL_LINKS.map(({ label, href, Glyph }) => (
                 <li key={label}>
                   <a
@@ -81,14 +88,14 @@ export default function Footer() {
           ))}
 
           {/* Newsletter */}
-          <div>
+          <div className="col-span-2 text-center lg:col-span-1 lg:text-left">
             <h3 className="font-poppins text-[15px] font-bold text-white">Newsletter</h3>
             <p className="mt-5 text-[13px] leading-[1.85] text-white/60">
               Subscribe to get updates
               <br />
               and latest offers.
             </p>
-            <form onSubmit={onSubscribe} className="mt-4 max-w-[260px] space-y-3">
+            <form onSubmit={onSubscribe} className="mx-auto mt-4 max-w-[280px] space-y-3 lg:mx-0 lg:max-w-[260px]">
               <input
                 type="email"
                 name="email"

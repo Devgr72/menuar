@@ -46,16 +46,18 @@ export default function Hero() {
 
           {/* Quick highlights */}
           <Reveal direction="left" delay={0.28}>
-            <ul className="mt-8 flex items-stretch">
+            {/* Equal-width columns rather than a nowrap flex row, so the three
+                labels never push past the viewport on narrow phones. */}
+            <ul className="mt-8 grid max-w-[380px] grid-cols-3">
               {HERO_HIGHLIGHTS.map(({ icon: Icon, label }, i) => (
                 <li
                   key={label}
-                  className={`flex flex-col items-center gap-2 px-5 first:pl-0 sm:px-8 ${
+                  className={`flex flex-col items-center gap-2 px-2 text-center sm:px-4 ${
                     i > 0 ? 'border-l border-dd-line' : ''
                   }`}
                 >
-                  <Icon className="h-7 w-7 text-dd-orange" strokeWidth={1.6} />
-                  <span className="whitespace-nowrap font-poppins text-[13px] font-semibold text-dd-navy">
+                  <Icon className="h-6 w-6 text-dd-orange sm:h-7 sm:w-7" strokeWidth={1.6} />
+                  <span className="font-poppins text-[12px] font-semibold leading-tight text-dd-navy sm:text-[13px]">
                     {label}
                   </span>
                 </li>

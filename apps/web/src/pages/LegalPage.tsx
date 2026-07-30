@@ -36,7 +36,8 @@ export default function LegalPage({ doc }: { doc: LegalDocument }) {
 
         <div className="dd-container grid gap-10 py-12 lg:grid-cols-[minmax(0,240px)_minmax(0,1fr)] lg:gap-14 lg:py-16">
           {/* Contents */}
-          <nav aria-label="On this page" className="lg:sticky lg:top-[104px] lg:self-start">
+          {/* Hidden on small screens — 14 links ahead of the body is a lot of scrolling */}
+          <nav aria-label="On this page" className="hidden lg:sticky lg:top-[104px] lg:block lg:self-start">
             <p className="font-poppins text-[13px] font-bold uppercase tracking-wider text-dd-navy">
               On this page
             </p>

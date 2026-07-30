@@ -9,6 +9,7 @@ import {
   QrCode,
   ScanLine,
   ShoppingCart,
+  Smartphone,
   Star,
   Users,
   type LucideIcon,
@@ -94,6 +95,11 @@ export const WHY_CHOOSE: FeatureItem[] = [
     icon: IndianRupee,
     title: 'Affordable &\nEffective',
     lines: ['Premium experience', 'at low cost.'],
+  },
+  {
+    icon: Smartphone,
+    title: 'No App\nNeeded',
+    lines: ['Runs in any phone', 'browser instantly.'],
   },
 ]
 

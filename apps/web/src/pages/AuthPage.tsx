@@ -226,10 +226,10 @@ export default function AuthPage({ mode }: Props) {
   return (
     <div className="min-h-screen bg-dd-soft font-poppins text-dd-ink">
       <div className="flex min-h-screen items-center justify-center p-4 sm:p-5">
-        <div className="grid w-full max-w-[1000px] overflow-hidden rounded-card border border-dd-line bg-white shadow-card md:grid-cols-[minmax(0,42%)_minmax(0,58%)]">
+        <div className="grid w-full max-w-[1000px] overflow-hidden rounded-card border border-dd-line bg-white shadow-card lg:grid-cols-[minmax(0,42%)_minmax(0,58%)]">
 
           {/* ── Brand panel ─────────────────────────────────────────────── */}
-          <div className="relative hidden flex-col justify-between bg-dd-navy p-10 md:flex lg:p-12">
+          <div className="relative hidden flex-col justify-between bg-dd-navy p-10 lg:flex lg:p-12">
             <div
               className="pointer-events-none absolute inset-0 opacity-[0.06]"
               style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '28px 28px' }}
@@ -290,7 +290,7 @@ export default function AuthPage({ mode }: Props) {
           {/* ── Form panel ──────────────────────────────────────────────── */}
           <div className="flex flex-col justify-center p-6 sm:p-8 lg:px-10 lg:py-8">
             {/* Brand panel is hidden below md — repeat the mark here */}
-            <Link to="/" className="mb-6 flex items-center gap-3 md:hidden">
+            <Link to="/" className="mb-6 flex items-center gap-3 lg:hidden">
               <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-xl bg-dd-soft">
                 <img src="/dishdekho-icon.png" alt="" className="h-full w-full object-contain p-1" />
               </span>
