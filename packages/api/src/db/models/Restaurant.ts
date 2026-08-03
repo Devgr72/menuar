@@ -9,6 +9,7 @@ export interface IRestaurant {
   qrKey?: string;
   qrUrl?: string;
   scanCount: number;
+  photosUsed: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,6 +23,7 @@ const restaurantSchema = new Schema(
     qrKey: { type: String },
     qrUrl: { type: String },
     scanCount: { type: Number, default: 0 },
+    photosUsed: { type: Number, default: 0 },
   },
   { timestamps: true },
 );

@@ -5,7 +5,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { saveFile } from '../services/storage.service.js';
 import { genId } from '../db/id.js';
 import { extractMenuFromPhotos, GeminiExtractionError } from '../services/gemini.service.js';
-import type { MenuScanDraft } from '@menuar/types';
+import { MAX_MENU_SCAN_PHOTOS, type MenuScanDraft } from '@menuar/types';
 
 const router = Router();
 
@@ -51,6 +51,23 @@ router.post('/', requireAuth, upload.array('photos', 20), async (req, res) => {
     if (!ctx) return;
     const { restaurant } = ctx;
 
+    const photosUsed = restaurant.photosUsed ?? 0;
+    const photosRemaining = MAX_MENU_SCAN_PHOTOS - photosUsed;
+    if (files.length > photosRemaining) {
+      res.status(400).json({
+        error:
+          photosRemaining > 0
+            ? `You have ${photosRemaining} of ${MAX_MENU_SCAN_PHOTOS} photo upload${photosRemaining === 1 ? '' : 's'} left — this scan needs ${files.length}.`
+            : `You've used all ${MAX_MENU_SCAN_PHOTOS} of your photo uploads. Contact support to request more.`,
+        code: 'PHOTO_QUOTA_EXCEEDED',
+      });
+      return;
+    }
+
+    // Charged up front, before the Gemini call — a failed extraction still spends the
+    // photos actually uploaded, so owners have a real incentive to upload clear photos.
+    await Restaurant.updateOne({ _id: restaurant._id }, { $inc: { photosUsed: files.length } });
+
     let draft: MenuScanDraft;
     try {
       draft = await extractMenuFromPhotos(files.map((f) => ({ buffer: f.buffer, mimeType: f.mimetype })));
@@ -80,7 +97,12 @@ router.post('/', requireAuth, upload.array('photos', 20), async (req, res) => {
       geminiModel: 'gemini-flash-latest',
     });
 
-    res.json({ scanId: scan._id, draft: scan.draft });
+    res.json({
+      scanId: scan._id,
+      draft: scan.draft,
+      photosUsed: photosUsed + files.length,
+      photosRemaining: photosRemaining - files.length,
+    });
   } catch (err) {
     console.error('[MenuScan Error]', err);
     res.status(500).json({ error: 'Failed to process menu scan', code: 'SCAN_ERROR', details: String(err) });

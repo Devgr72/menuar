@@ -3,6 +3,7 @@ import { z } from 'zod';
 import mongoose from 'mongoose';
 import { Restaurant, RestaurantOwner, DishSlot, Subscription } from '../db/models/index.js';
 import { requireAuth } from '../middleware/auth.js';
+import { syncPendingSubscriptionWithRazorpay } from '../services/razorpay.service.js';
 
 const IS_DEV = process.env.NODE_ENV !== 'production';
 function log(step: string, data?: unknown) {
@@ -120,6 +121,14 @@ router.get('/me', requireAuth, async (req, res) => {
     return;
   }
 
+  // Keep in sync with /subscription/status: fast-forward a pending subscription via
+  // Razorpay if the activation webhook hasn't landed yet, so ProtectedRoute's gate
+  // (which reads /me) never redirects away from /dashboard right after a real payment.
+  const syncedSubscription =
+    subscription?.status === 'pending'
+      ? await syncPendingSubscriptionWithRazorpay(subscription, restaurant)
+      : subscription;
+
   res.json({
     owner: {
       id: owner._id,
@@ -134,14 +143,15 @@ router.get('/me', requireAuth, async (req, res) => {
       plan: restaurant.plan,
       qrUrl: restaurant.qrUrl,
       scanCount: restaurant.scanCount,
+      photosUsed: restaurant.photosUsed ?? 0,
       createdAt: restaurant.createdAt,
     },
-    subscription: subscription
+    subscription: syncedSubscription
       ? {
-          id: subscription._id,
-          status: subscription.status,
-          activatedAt: subscription.activatedAt,
-          nextBillingAt: subscription.nextBillingAt,
+          id: syncedSubscription._id,
+          status: syncedSubscription.status,
+          activatedAt: syncedSubscription.activatedAt,
+          nextBillingAt: syncedSubscription.nextBillingAt,
         }
       : null,
   });

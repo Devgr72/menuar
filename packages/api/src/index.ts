@@ -81,6 +81,7 @@ async function main() {
   const { default: webhookRoutes } = await import('./routes/webhook.routes.js');
   const { default: inquiryRoutes } = await import('./routes/inquiry.routes.js');
   const { default: menuScanRoutes } = await import('./routes/menuScan.routes.js');
+  const { default: menuEditRoutes } = await import('./routes/menuEdit.routes.js');
   const { startPoller } = await import('./services/pipeline.service.js');
 
   app.use('/api/v1/menu', menuRoutes);
@@ -92,6 +93,7 @@ async function main() {
   app.use('/api/v1/webhook', webhookRoutes);
   app.use('/api/v1/inquiry', inquiryRoutes);
   app.use('/api/v1/menu-scan', menuScanRoutes);
+  app.use('/api/v1/menu-edit', menuEditRoutes);
 
   // Dev-only manual activation route (never mounted in production)
   if (IS_DEV) {
@@ -124,6 +126,13 @@ async function main() {
   console.log('  POST /api/v1/menu-scan');
   console.log('  GET  /api/v1/menu-scan/:id');
   console.log('  POST /api/v1/menu-scan/:id/publish');
+  console.log('  GET  /api/v1/menu-edit');
+  console.log('  POST /api/v1/menu-edit/categories');
+  console.log('  PATCH /api/v1/menu-edit/categories/:id');
+  console.log('  DELETE /api/v1/menu-edit/categories/:id');
+  console.log('  POST /api/v1/menu-edit/categories/:id/dishes');
+  console.log('  PATCH /api/v1/menu-edit/dishes/:id');
+  console.log('  DELETE /api/v1/menu-edit/dishes/:id');
   console.log('  GET  /api/v1/admin/stats');
   console.log('  GET  /api/v1/admin/inquiries');
   console.log('  GET  /api/v1/admin/restaurants');

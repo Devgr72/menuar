@@ -56,6 +56,7 @@ router.get('/dashboard', requireAuth, async (req, res) => {
         plan: restaurant.plan,
         qrUrl: restaurant.qrUrl,
         scanCount: restaurant.scanCount,
+        photosUsed: restaurant.photosUsed ?? 0,
         createdAt: restaurant.createdAt,
       },
       subscription: subscription
