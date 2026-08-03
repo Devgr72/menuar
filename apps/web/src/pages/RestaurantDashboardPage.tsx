@@ -327,6 +327,12 @@ function ProfileEditWrapper({
                     ))}
                   </div>
                   <span className="text-xs font-bold text-[#64748B]">{liveCount}/{slots.length} slots used</span>
+                  <button
+                    onClick={() => navigate('/dashboard/digital-menu')}
+                    className="text-xs font-bold text-white bg-[#FF6B00] hover:bg-[#E85F00] transition-colors px-4 py-2 rounded-xl"
+                  >
+                    Scan your menu
+                  </button>
                 </div>
               </div>
 

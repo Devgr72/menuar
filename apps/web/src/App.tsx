@@ -38,6 +38,7 @@ import OnboardingPage from './pages/OnboardingPage'
 import PlanSelectionPage from './pages/PlanSelectionPage'
 import PaymentCallbackPage from './pages/PaymentCallbackPage'
 import RestaurantDashboardPage from './pages/RestaurantDashboardPage'
+import DigitalMenuPage from './pages/DigitalMenuPage'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import { useAuthState } from './hooks/useAuthState'
 
@@ -105,6 +106,14 @@ export default function App() {
           element={
             <ProtectedRoute require="active">
               <RestaurantDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/digital-menu"
+          element={
+            <ProtectedRoute require="active">
+              <DigitalMenuPage />
             </ProtectedRoute>
           }
         />
