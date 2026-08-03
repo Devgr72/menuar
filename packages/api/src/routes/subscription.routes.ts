@@ -1,16 +1,12 @@
 import { Router } from 'express';
-import { Restaurant, RestaurantOwner, Subscription, Menu, Category } from '../db/models/index.js';
+import { Restaurant, RestaurantOwner, Subscription } from '../db/models/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import {
   ensureMonthlyPlan,
   createRazorpaySubscription,
-  getClient,
+  syncPendingSubscriptionWithRazorpay,
   AMOUNT_PAISE,
 } from '../services/razorpay.service.js';
-import QRCode from 'qrcode';
-import { saveFile } from '../services/storage.service.js';
-
-const WEB_URL = process.env.WEB_URL || 'http://localhost:3000';
 
 const router = Router();
 const IS_DEV = process.env.NODE_ENV !== 'production';
@@ -153,49 +149,7 @@ router.get('/status', requireAuth, async (req, res) => {
 
   // Fallback sync for local development where Razorpay webhooks cannot reach localhost
   if (sub.status === 'pending') {
-    try {
-      const client = getClient();
-      const rzpSub = await client.subscriptions.fetch(sub.razorpaySubId);
-
-      if (rzpSub.status === 'active' || rzpSub.status === 'authenticated') {
-        log('Razorpay says active/authenticated — fast-forwarding subscription state (webhook fallback)');
-        // @ts-ignore
-        const chargeAt = rzpSub.charge_at as number | undefined;
-
-        const updatedSub = await Subscription.findByIdAndUpdate(
-          sub._id,
-          {
-            status: 'active',
-            activatedAt: new Date(),
-            nextBillingAt: chargeAt ? new Date(chargeAt * 1000) : undefined,
-            haltedAt: null,
-          },
-          { new: true },
-        ).lean();
-        sub = updatedSub!;
-
-        // Generate QR code if missing
-        if (!restaurant.qrUrl) {
-          const qrBuffer = await QRCode.toBuffer(`${WEB_URL}/ar/${restaurant.slug}`, {
-            errorCorrectionLevel: 'H',
-            width: 400,
-            margin: 2,
-            color: { dark: '#000000', light: '#FFFFFF' },
-          });
-          const { url } = await saveFile(`qr/${restaurant._id}`, 'main.png', qrBuffer);
-          await Restaurant.updateOne({ _id: restaurant._id }, { qrKey: `qr/${restaurant._id}/main.png`, qrUrl: url });
-        }
-
-        // Create default menu if lacking
-        const existingMenu = await Menu.findOne({ restaurantId: restaurant._id }).lean();
-        if (!existingMenu) {
-          const menu = await Menu.create({ restaurantId: restaurant._id, name: 'Menu', isActive: true });
-          await Category.create({ menuId: menu._id, name: 'Dishes', sortOrder: 0 });
-        }
-      }
-    } catch (err) {
-      logError('Failed to sync pending subscription with Razorpay:', err);
-    }
+    sub = await syncPendingSubscriptionWithRazorpay(sub, restaurant);
   }
 
   log('Status: returning subscription', { status: sub.status, id: sub._id });

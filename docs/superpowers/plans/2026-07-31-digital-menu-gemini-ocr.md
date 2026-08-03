@@ -16,7 +16,7 @@
 - Feature lives at its own route, `/dashboard/digital-menu`, not a modal
 - Scan processing is synchronous (single HTTP request/response) — no job queue or polling
 - No fuzzy dedup against dishes already in the catalog — the review step is the safeguard (explicit non-goal)
-- Model is `gemini-2.5-flash`, key read from `GEMINI_API_KEY` env var
+- Model is `gemini-flash-latest`, key read from `GEMINI_API_KEY` env var
 - No automated test harness exists in this repo — every task's verification step is `tsc --noEmit` plus a manual/scripted smoke check, matching how the prior payment-polling fix in this session was verified
 - Spec source of truth: `docs/superpowers/specs/2026-07-30-digital-menu-gemini-ocr-design.md`
 
@@ -365,7 +365,7 @@ export async function extractMenuFromPhotos(
   let response;
   try {
     response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-flash-latest',
       contents: [createUserContent([EXTRACTION_PROMPT, ...fileParts])],
       config: {
         responseMimeType: 'application/json',
@@ -552,7 +552,7 @@ router.post('/', requireAuth, upload.array('photos', 20), async (req, res) => {
     status: 'ready',
     photoKeys,
     draft,
-    geminiModel: 'gemini-2.5-flash',
+    geminiModel: 'gemini-flash-latest',
   });
 
   res.json({ scanId: scan._id, draft: scan.draft });

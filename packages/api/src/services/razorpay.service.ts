@@ -1,6 +1,10 @@
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
+import QRCode from 'qrcode';
+import { Restaurant, Subscription, Menu, Category } from '../db/models/index.js';
+import { saveFile } from './storage.service.js';
 
+const WEB_URL = process.env.WEB_URL || 'http://localhost:3000';
 const AMOUNT_PAISE = 50000; // ₹500 in paise
 const MONTHLY_TOTAL_COUNT = 120; // 10 years max — effectively unlimited
 
@@ -82,6 +86,80 @@ export function verifyWebhookSignature(rawBody: string, signature: string): bool
   if (!secret) return false;
   const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+}
+
+interface PendingSubscriptionDoc {
+  _id: unknown;
+  status: string;
+  razorpaySubId: string;
+}
+
+interface RestaurantDoc {
+  _id: unknown;
+  slug: string;
+  qrUrl?: string;
+}
+
+/**
+ * Fast-forwards a `pending` subscription to `active` by checking Razorpay directly,
+ * for cases where the activation webhook hasn't landed yet (unreachable localhost in dev,
+ * or webhook delivery lag in prod). Returns the up-to-date subscription doc either way.
+ *
+ * Shared by GET /subscription/status and GET /auth/me so both endpoints — and therefore
+ * both the payment-callback poll and the ProtectedRoute auth gate — agree on subscription
+ * state instead of racing each other.
+ */
+export async function syncPendingSubscriptionWithRazorpay<T extends PendingSubscriptionDoc>(
+  sub: T,
+  restaurant: RestaurantDoc,
+): Promise<T> {
+  if (sub.status !== 'pending') return sub;
+
+  try {
+    const client = getClient();
+    const rzpSub = await client.subscriptions.fetch(sub.razorpaySubId);
+
+    if (rzpSub.status !== 'active' && rzpSub.status !== 'authenticated') {
+      return sub;
+    }
+
+    // @ts-ignore — Razorpay types incomplete
+    const chargeAt = rzpSub.charge_at as number | undefined;
+
+    const updatedSub = await Subscription.findByIdAndUpdate(
+      sub._id,
+      {
+        status: 'active',
+        activatedAt: new Date(),
+        nextBillingAt: chargeAt ? new Date(chargeAt * 1000) : undefined,
+        haltedAt: null,
+      },
+      { new: true },
+    ).lean();
+
+    // Generate QR code if missing
+    if (!restaurant.qrUrl) {
+      const qrBuffer = await QRCode.toBuffer(`${WEB_URL}/ar/${restaurant.slug}`, {
+        errorCorrectionLevel: 'H',
+        width: 400,
+        margin: 2,
+        color: { dark: '#000000', light: '#FFFFFF' },
+      });
+      const { url } = await saveFile(`qr/${restaurant._id}`, 'main.png', qrBuffer);
+      await Restaurant.updateOne({ _id: restaurant._id }, { qrKey: `qr/${restaurant._id}/main.png`, qrUrl: url });
+    }
+
+    // Create default menu if lacking
+    const existingMenu = await Menu.findOne({ restaurantId: restaurant._id }).lean();
+    if (!existingMenu) {
+      const menu = await Menu.create({ restaurantId: restaurant._id, name: 'Menu', isActive: true });
+      await Category.create({ menuId: menu._id, name: 'Dishes', sortOrder: 0 });
+    }
+
+    return updatedSub! as T;
+  } catch {
+    return sub;
+  }
 }
 
 export { AMOUNT_PAISE };
