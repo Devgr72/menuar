@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { scanMenuPhotos, getMenuScan, publishMenuScan } from '../api/client'
-import type { MenuScanDraft, MenuScanCategory, MenuScanDish } from '@menuar/types'
+import { scanMenuPhotos, getMenuScan, publishMenuScan, getDashboard } from '../api/client'
+import { MAX_MENU_SCAN_PHOTOS, type MenuScanDraft, type MenuScanCategory, type MenuScanDish } from '@menuar/types'
 
 type Step = 'upload' | 'processing' | 'review' | 'publishing' | 'done' | 'error'
 
-const MAX_PHOTOS = 20
 const SCAN_ID_STORAGE_KEY = 'digitalMenuScanId'
 
 function emptyDish(): MenuScanDish {
@@ -20,6 +19,7 @@ export default function DigitalMenuPage() {
   const [draft, setDraft] = useState<MenuScanDraft | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
   const [publishSummary, setPublishSummary] = useState<{ categoriesCreated: number; dishesCreated: number } | null>(null)
+  const [photosRemaining, setPhotosRemaining] = useState<number | null>(null)
 
   // Resume an in-progress scan after a reload, if one was left mid-review.
   useEffect(() => {
@@ -39,9 +39,18 @@ export default function DigitalMenuPage() {
       .catch(() => localStorage.removeItem(SCAN_ID_STORAGE_KEY))
   }, [])
 
+  // How many of the lifetime 20-photo allowance this restaurant has left.
+  useEffect(() => {
+    getDashboard()
+      .then((data) => setPhotosRemaining(MAX_MENU_SCAN_PHOTOS - data.restaurant.photosUsed))
+      .catch(() => setPhotosRemaining(MAX_MENU_SCAN_PHOTOS))
+  }, [])
+
+  const maxSelectable = Math.max(0, photosRemaining ?? MAX_MENU_SCAN_PHOTOS)
+
   function handleFilesSelected(fileList: FileList | null) {
     if (!fileList) return
-    const selected = Array.from(fileList).slice(0, MAX_PHOTOS)
+    const selected = Array.from(fileList).slice(0, maxSelectable)
     setPhotos(selected)
   }
 
@@ -55,6 +64,7 @@ export default function DigitalMenuPage() {
       const result = await scanMenuPhotos(photos)
       setScanId(result.scanId)
       setDraft(result.draft)
+      setPhotosRemaining(result.photosRemaining)
       localStorage.setItem(SCAN_ID_STORAGE_KEY, result.scanId)
       setStep('review')
     } catch (err) {
@@ -125,15 +135,50 @@ export default function DigitalMenuPage() {
 
         {step === 'upload' && (
           <div className="bg-white rounded-3xl p-8 shadow-sm border border-[#F1F5F9] space-y-6">
-            <label className="block border-2 border-dashed border-[#E2E8F0] rounded-2xl p-10 text-center cursor-pointer hover:border-[#FF6B00] transition-colors">
+            {photosRemaining !== null && (
+              <div
+                className={`rounded-2xl px-5 py-4 border text-sm ${
+                  maxSelectable > 0
+                    ? 'bg-[#FFF7ED] border-[#FED7AA] text-[#9A3412]'
+                    : 'bg-[#FEF2F2] border-[#FEE2E2] text-[#991B1B]'
+                }`}
+              >
+                {maxSelectable > 0 ? (
+                  <>
+                    <p className="font-bold">
+                      {photosRemaining} of {MAX_MENU_SCAN_PHOTOS} photo uploads remaining
+                    </p>
+                    <p className="mt-1 text-[#B45309]">
+                      This is a lifetime limit, so make each one count — use clear, well-lit photos, taken
+                      straight-on, that show your dishes and prices clearly.
+                    </p>
+                  </>
+                ) : (
+                  <p className="font-bold">
+                    You've used all {MAX_MENU_SCAN_PHOTOS} of your photo uploads. Contact support to request more.
+                  </p>
+                )}
+              </div>
+            )}
+
+            <label
+              className={`block border-2 border-dashed rounded-2xl p-10 text-center transition-colors ${
+                maxSelectable > 0
+                  ? 'border-[#E2E8F0] cursor-pointer hover:border-[#FF6B00]'
+                  : 'border-[#E2E8F0] opacity-50 cursor-not-allowed'
+              }`}
+            >
               <input
                 type="file"
                 accept="image/*"
                 multiple
+                disabled={maxSelectable === 0}
                 className="hidden"
                 onChange={(e) => handleFilesSelected(e.target.files)}
               />
-              <p className="font-outfit font-semibold text-[#0F2747]">Click to select up to {MAX_PHOTOS} photos</p>
+              <p className="font-outfit font-semibold text-[#0F2747]">
+                Click to select up to {maxSelectable} photo{maxSelectable === 1 ? '' : 's'}
+              </p>
               <p className="text-sm text-[#94A3B8] mt-1">JPG or PNG, one photo per menu page</p>
             </label>
 

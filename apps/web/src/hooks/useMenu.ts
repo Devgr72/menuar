@@ -15,6 +15,7 @@ const MOCK_RESTAURANT: Restaurant = {
   slug: 'pizza-palace',
   plan: 'free',
   scanCount: 0,
+  photosUsed: 0,
   createdAt: new Date().toISOString(),
 };
 

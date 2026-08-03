@@ -39,6 +39,7 @@ import PlanSelectionPage from './pages/PlanSelectionPage'
 import PaymentCallbackPage from './pages/PaymentCallbackPage'
 import RestaurantDashboardPage from './pages/RestaurantDashboardPage'
 import DigitalMenuPage from './pages/DigitalMenuPage'
+import EditDigitalMenuPage from './pages/EditDigitalMenuPage'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import { useAuthState } from './hooks/useAuthState'
 
@@ -114,6 +115,14 @@ export default function App() {
           element={
             <ProtectedRoute require="active">
               <DigitalMenuPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/digital-menu/edit"
+          element={
+            <ProtectedRoute require="active">
+              <EditDigitalMenuPage />
             </ProtectedRoute>
           }
         />

@@ -230,7 +230,7 @@ export default function RestaurantDashboardPage() {
 
 interface WrapperProps {
   owner: { id: string; ownerName: string; email?: string; restaurantId: string; createdAt: string }
-  restaurant: { id: string; name: string; slug: string; plan: string; qrUrl?: string; scanCount: number; createdAt: string }
+  restaurant: { id: string; name: string; slug: string; plan: string; qrUrl?: string; scanCount: number; photosUsed: number; createdAt: string }
   subscription: { id: string; status: string; activatedAt?: string; nextBillingAt?: string; haltedAt?: string; amount: number } | null
   slots: DishSlot[]
   isHalted: boolean
@@ -249,6 +249,7 @@ function ProfileEditWrapper({
   selectedSlot, setSelectedSlot, refetch, navigate, signOut,
 }: WrapperProps) {
   const edit = useInlineEdit(owner.ownerName, restaurant.name)
+  const hasDigitalMenu = restaurant.photosUsed > 0
 
   return (
     <div className="p-4 sm:p-8 lg:p-12">
@@ -323,17 +324,21 @@ function ProfileEditWrapper({
                   📋
                 </div>
                 <div>
-                  <h3 className="font-fraunces text-xl font-bold text-white">Create Your Digital Menu</h3>
+                  <h3 className="font-fraunces text-xl font-bold text-white">
+                    {hasDigitalMenu ? 'Your Digital Menu' : 'Create Your Digital Menu'}
+                  </h3>
                   <p className="font-outfit text-sm text-white/60 mt-1 max-w-md">
-                    Photograph your physical menu and let AI read the dishes, prices, and categories for you.
+                    {hasDigitalMenu
+                      ? `${Math.max(0, 20 - restaurant.photosUsed)} of 20 photo uploads remaining. Edit dishes or scan more photos any time.`
+                      : 'Photograph your physical menu and let AI read the dishes, prices, and categories for you.'}
                   </p>
                 </div>
               </div>
               <button
-                onClick={() => navigate('/dashboard/digital-menu')}
+                onClick={() => navigate(hasDigitalMenu ? '/dashboard/digital-menu/edit' : '/dashboard/digital-menu')}
                 className="flex-none w-full sm:w-auto text-sm font-bold text-white bg-[#FF6B00] hover:bg-[#E85F00] transition-colors px-6 py-3 rounded-xl"
               >
-                Create Digital Menu
+                {hasDigitalMenu ? 'Edit Digital Menu' : 'Create Digital Menu'}
               </button>
             </div>
 
