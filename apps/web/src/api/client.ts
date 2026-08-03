@@ -7,6 +7,13 @@ import type {
   MenuScanStatusResponse,
   MenuScanDraft,
   MenuScanPublishResponse,
+  MenuEditResponse,
+  CreateCategoryInput,
+  UpdateCategoryInput,
+  CreateDishInput,
+  UpdateDishInput,
+  Category,
+  Dish,
 } from '@menuar/types'
 
 // Empty string = use Vite proxy in dev (avoids CORS on HTTPS).
@@ -301,4 +308,46 @@ export async function publishMenuScan(
     method: 'POST',
     body: JSON.stringify(draft),
   })
+}
+
+// ─── Digital menu editing (owner CRUD on the live text menu) ───────────────────
+
+export async function getMenuEdit(): Promise<MenuEditResponse> {
+  return apiFetch('/api/v1/menu-edit')
+}
+
+export async function createMenuCategory(input: CreateCategoryInput): Promise<Category> {
+  return apiFetch('/api/v1/menu-edit/categories', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function renameMenuCategory(categoryId: string, input: UpdateCategoryInput): Promise<{ ok: true }> {
+  return apiFetch(`/api/v1/menu-edit/categories/${categoryId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function deleteMenuCategory(categoryId: string): Promise<{ ok: true }> {
+  return apiFetch(`/api/v1/menu-edit/categories/${categoryId}`, { method: 'DELETE' })
+}
+
+export async function createMenuDish(categoryId: string, input: CreateDishInput): Promise<Dish> {
+  return apiFetch(`/api/v1/menu-edit/categories/${categoryId}/dishes`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function updateMenuDish(dishId: string, input: UpdateDishInput): Promise<{ ok: true }> {
+  return apiFetch(`/api/v1/menu-edit/dishes/${dishId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function deleteMenuDish(dishId: string): Promise<{ ok: true }> {
+  return apiFetch(`/api/v1/menu-edit/dishes/${dishId}`, { method: 'DELETE' })
 }
