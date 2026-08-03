@@ -316,6 +316,27 @@ function ProfileEditWrapper({
               )}
             </div>
 
+            {/* Digital Menu CTA */}
+            <div className="bg-[#0F2747] rounded-3xl p-8 shadow-sm border border-[#0F2747] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+              <div className="flex items-center gap-5">
+                <div className="w-14 h-14 flex-none rounded-2xl bg-white/10 flex items-center justify-center text-2xl">
+                  📋
+                </div>
+                <div>
+                  <h3 className="font-fraunces text-xl font-bold text-white">Create Your Digital Menu</h3>
+                  <p className="font-outfit text-sm text-white/60 mt-1 max-w-md">
+                    Photograph your physical menu and let AI read the dishes, prices, and categories for you.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/dashboard/digital-menu')}
+                className="flex-none w-full sm:w-auto text-sm font-bold text-white bg-[#FF6B00] hover:bg-[#E85F00] transition-colors px-6 py-3 rounded-xl"
+              >
+                Create Digital Menu
+              </button>
+            </div>
+
             {/* Dish Management Section */}
             <div>
               <div className="flex items-center justify-between mb-6">
@@ -327,12 +348,6 @@ function ProfileEditWrapper({
                     ))}
                   </div>
                   <span className="text-xs font-bold text-[#64748B]">{liveCount}/{slots.length} slots used</span>
-                  <button
-                    onClick={() => navigate('/dashboard/digital-menu')}
-                    className="text-xs font-bold text-white bg-[#FF6B00] hover:bg-[#E85F00] transition-colors px-4 py-2 rounded-xl"
-                  >
-                    Scan your menu
-                  </button>
                 </div>
               </div>
 
