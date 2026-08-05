@@ -24,15 +24,10 @@ export default function MenuDishCard({ dish, onClick }: MenuDishCardProps) {
             🍽️
           </div>
         )}
-        {dish.price > 0 && (
-          <div className="absolute top-1 right-1 bg-white/90 backdrop-blur-sm px-1.5 py-0.5 rounded-lg border border-[#F1F5F9]">
-            <p className="text-[10px] font-bold text-[#0F2747]">₹{dish.price}</p>
-          </div>
-        )}
       </div>
 
-      <div className="flex-1 min-w-0 flex flex-col justify-center">
-        <div className="flex items-center gap-2 mb-1">
+      <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+        <div className="flex items-center gap-2">
           {dish.isVeg !== undefined && (
              <div className={`w-3.5 h-3.5 border-2 rounded-sm flex items-center justify-center ${dish.isVeg ? 'border-green-600' : 'border-red-600'}`}>
                 <div className={`w-1.5 h-1.5 rounded-full ${dish.isVeg ? 'bg-green-600' : 'bg-red-600'}`} />
@@ -40,8 +35,11 @@ export default function MenuDishCard({ dish, onClick }: MenuDishCardProps) {
           )}
           <h3 className="font-fraunces font-bold text-lg text-[#0F2747] truncate">{dish.name}</h3>
         </div>
-        <p className="font-outfit text-xs text-[#64748B] line-clamp-2 leading-relaxed">
-          {dish.description || 'Deliciously crafted for your table.'}
+        <p className="font-outfit text-sm font-bold text-[#0F2747]/70">
+          ₹{dish.price}
+        </p>
+        <p className="font-outfit text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+          Tap for details
         </p>
       </div>
 

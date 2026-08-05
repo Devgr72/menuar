@@ -9,8 +9,10 @@ export default function MenuARPage() {
   const { restaurantSlug } = useParams<{ restaurantSlug?: string }>();
   const [searchParams] = useSearchParams();
   const tableId = searchParams.get('table');
+  const isPreview = searchParams.get('preview') === '1';
 
-  const { restaurant, dishes, loading } = useMenu(restaurantSlug);
+  const { restaurant, categories, loading } = useMenu(restaurantSlug, { skipScanTracking: isPreview });
+  const dishCount = categories.reduce((sum, c) => sum + c.dishes.length, 0);
 
   const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
   const [arStatus, setArStatus] = useState<'idle' | 'placing' | 'placed' | 'unsupported'>('idle');
@@ -122,22 +124,31 @@ export default function MenuARPage() {
       </section>
 
       {/* ── Menu List ───────────────────────────────────────────────────── */}
-      <main className="flex-1 px-6 pt-4 space-y-4">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="font-fraunces font-bold text-xl text-[#0F2747]">Signature Dishes</h3>
+      <main className="flex-1 px-6 pt-4 space-y-10">
+        <div className="flex items-center justify-between -mb-6">
+          <h3 className="font-fraunces font-bold text-xl text-[#0F2747]">Our Menu</h3>
           <div className="w-8 h-8 rounded-full bg-[#0F2747]/5 flex items-center justify-center">
-             <span className="text-xs font-bold text-[#0F2747]">{dishes.length}</span>
+             <span className="text-xs font-bold text-[#0F2747]">{dishCount}</span>
           </div>
         </div>
 
-        {dishes.length > 0 ? (
-          dishes.map((dish) => (
-            <MenuDishCard 
-              key={dish.id} 
-              dish={dish} 
-              onClick={() => handleOpenDetail(dish)} 
-            />
-          ))
+        {dishCount > 0 ? (
+          categories
+            .filter((category) => category.dishes.length > 0)
+            .map((category) => (
+              <div key={category.id} className="space-y-4">
+                <h4 className="font-fraunces font-bold text-lg text-[#0F2747]/80 uppercase tracking-wide">
+                  {category.name}
+                </h4>
+                {category.dishes.map((dish) => (
+                  <MenuDishCard
+                    key={dish.id}
+                    dish={dish}
+                    onClick={() => handleOpenDetail(dish)}
+                  />
+                ))}
+              </div>
+            ))
         ) : (
           <div className="py-20 text-center space-y-4 bg-white rounded-[2.5rem] border border-dashed border-[#E2E8F0]">
             <div className="w-16 h-16 bg-[#F8FAFC] rounded-full flex items-center justify-center mx-auto text-2xl">🍽️</div>

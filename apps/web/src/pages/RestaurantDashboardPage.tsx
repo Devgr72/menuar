@@ -309,6 +309,7 @@ function ProfileEditWrapper({
                   qrUrl={restaurant.qrUrl}
                   restaurantName={restaurant.name}
                   slug={restaurant.slug}
+                  hasDigitalMenu={hasDigitalMenu}
                 />
               ) : (
                 <div className="h-48 flex flex-col items-center justify-center border-2 border-dashed border-[#E2E8F0] rounded-2xl bg-[#F8FAFC]">

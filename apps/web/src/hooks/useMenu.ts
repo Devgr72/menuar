@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Dish, MenuResponse, Restaurant, Menu } from '@menuar/types';
+import type { Dish, MenuResponse, Restaurant, Menu, Category } from '@menuar/types';
 import { menuClient } from '../api/menuClient';
 import { recordQRScan } from '../api/client';
 
@@ -44,15 +44,16 @@ const MOCK_MENU: Menu = {
 
 interface UseMenuResult {
   restaurant: Restaurant;
-  dishes: Dish[];
+  categories: Category[];
   loading: boolean;
   usingMockData: boolean;
 }
 
-export function useMenu(restaurantSlug?: string): UseMenuResult {
+export function useMenu(restaurantSlug?: string, options?: { skipScanTracking?: boolean }): UseMenuResult {
   const [data, setData] = useState<MenuResponse | null>(null);
   const [loading, setLoading] = useState(!!restaurantSlug);
   const [usingMockData, setUsingMockData] = useState(false);
+  const skipScanTracking = options?.skipScanTracking ?? false;
 
   useEffect(() => {
     if (!restaurantSlug) {
@@ -64,8 +65,10 @@ export function useMenu(restaurantSlug?: string): UseMenuResult {
     let cancelled = false;
     setLoading(true);
 
-    // Fire QR scan event (fire-and-forget, rate-limited server-side)
-    recordQRScan(restaurantSlug);
+    // Fire QR scan event (fire-and-forget, rate-limited server-side) — skipped for dashboard previews
+    if (!skipScanTracking) {
+      recordQRScan(restaurantSlug);
+    }
 
     menuClient
       .getMenu(restaurantSlug)
@@ -83,15 +86,13 @@ export function useMenu(restaurantSlug?: string): UseMenuResult {
       });
 
     return () => { cancelled = true; };
-  }, [restaurantSlug]);
+  }, [restaurantSlug, skipScanTracking]);
 
-  // Flatten dishes from all categories
   const categories = data?.menu.categories ?? MOCK_MENU.categories;
-  const dishes = categories.flatMap((c) => c.dishes);
 
   return {
     restaurant: data?.restaurant ?? MOCK_RESTAURANT,
-    dishes,
+    categories,
     loading,
     usingMockData,
   };
