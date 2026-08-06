@@ -69,6 +69,8 @@ export interface DishSlot {
   photoUrls?: string[];   // CDN URLs of 3D-angle photos (populated by admin API)
   glbKey?: string;
   glbUrl?: string;
+  usdzKey?: string;
+  usdzUrl?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -85,6 +87,7 @@ export interface Dish {
   ingredients?: string[];
   isAvailable: boolean;
   modelUrl?: string;
+  usdzUrl?: string;
   thumbnailUrl?: string;
   modelStatus: ModelStatus;
   modelSource: ModelSource;
