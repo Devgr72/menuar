@@ -6,11 +6,11 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "https://menuar-2.onrender.com/api/$1"
+      "dest": "https://menuar-3nof.onrender.com/api/$1"
     },
     {
       "src": "/uploads/(.*)",
-      "dest": "https://menuar-2.onrender.com/uploads/$1"
+      "dest": "https://menuar-3nof.onrender.com/uploads/$1"
     },
     {
       "handle": "filesystem"
