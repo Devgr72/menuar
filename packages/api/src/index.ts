@@ -12,6 +12,8 @@ const IS_DEV = process.env.NODE_ENV !== 'production';
 // Allow both http and https localhost in dev; use WEB_URL in production
 const allowedOrigins = [
   'https://menuar-web.vercel.app',
+  'https://www.dishdekho.com',
+  'https://dishdekho.com',
   'http://localhost:3000',
   'https://localhost:3000',
   'http://localhost:3002',
