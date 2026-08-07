@@ -4,7 +4,7 @@ import { signOut } from '../lib/auth-client'
 import { useDashboard } from '../hooks/useDashboard'
 import QRCodeDisplay from '../components/dashboard/QRCodeDisplay'
 import DishPhotoUploadModal from '../components/dashboard/DishPhotoUploadModal'
-import { updateProfile } from '../api/client'
+import { updateProfile, uploadRestaurantLogo } from '../api/client'
 import type { DishSlot } from '@menuar/types'
 
 // ─── Status config ────────────────────────────────────────────────────────────
@@ -46,10 +46,14 @@ const STATUS_CONFIG = {
 
 // ─── Inline edit hook ─────────────────────────────────────────────────────────
 
-function useInlineEdit(initialOwner: string, initialRestaurant: string) {
+function useInlineEdit(initialOwner: string, initialRestaurant: string, initialHeroFields: { tagline?: string, h1?: string, h2?: string, desc?: string }) {
   const [editing, setEditing] = useState(false)
   const [ownerName, setOwnerName] = useState(initialOwner)
   const [restaurantName, setRestaurantName] = useState(initialRestaurant)
+  const [heroTagline, setHeroTagline] = useState(initialHeroFields.tagline ?? 'Interactive Dining')
+  const [heroHeading1, setHeroHeading1] = useState(initialHeroFields.h1 ?? 'Experience Food')
+  const [heroHeading2, setHeroHeading2] = useState(initialHeroFields.h2 ?? 'Before You Order.')
+  const [heroDescription, setHeroDescription] = useState(initialHeroFields.desc ?? 'Scan, view, and interact with our signature dishes in augmented reality.')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
@@ -60,6 +64,10 @@ function useInlineEdit(initialOwner: string, initialRestaurant: string) {
       await updateProfile({
         ownerName: ownerName.trim() !== initialOwner ? ownerName.trim() : undefined,
         restaurantName: restaurantName.trim() !== initialRestaurant ? restaurantName.trim() : undefined,
+        heroTagline: heroTagline.trim() !== (initialHeroFields.tagline ?? 'Interactive Dining') ? heroTagline.trim() : undefined,
+        heroHeading1: heroHeading1.trim() !== (initialHeroFields.h1 ?? 'Experience Food') ? heroHeading1.trim() : undefined,
+        heroHeading2: heroHeading2.trim() !== (initialHeroFields.h2 ?? 'Before You Order.') ? heroHeading2.trim() : undefined,
+        heroDescription: heroDescription.trim() !== (initialHeroFields.desc ?? 'Scan, view, and interact with our signature dishes in augmented reality.') ? heroDescription.trim() : undefined,
       })
       setEditing(false)
     } catch (err) {
@@ -72,11 +80,15 @@ function useInlineEdit(initialOwner: string, initialRestaurant: string) {
   function cancel() {
     setOwnerName(initialOwner)
     setRestaurantName(initialRestaurant)
+    setHeroTagline(initialHeroFields.tagline ?? 'Interactive Dining')
+    setHeroHeading1(initialHeroFields.h1 ?? 'Experience Food')
+    setHeroHeading2(initialHeroFields.h2 ?? 'Before You Order.')
+    setHeroDescription(initialHeroFields.desc ?? 'Scan, view, and interact with our signature dishes in augmented reality.')
     setSaveError(null)
     setEditing(false)
   }
 
-  return { editing, setEditing, ownerName, setOwnerName, restaurantName, setRestaurantName, saving, saveError, save, cancel }
+  return { editing, setEditing, ownerName, setOwnerName, restaurantName, setRestaurantName, heroTagline, setHeroTagline, heroHeading1, setHeroHeading1, heroHeading2, setHeroHeading2, heroDescription, setHeroDescription, saving, saveError, save, cancel }
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -94,8 +106,8 @@ function Sidebar({ active, navigate, signOut }: { active: string; navigate: (p: 
     <div className="flex flex-col h-full bg-[#FFFFFF] border-r border-[#F1F5F9]">
       <div className="p-6">
         <div className="flex items-center gap-4 mb-10">
-          <img src="/dishdekho.jpeg" alt="DishDekho Logo" className="w-12 h-12 rounded-xl object-contain shadow-sm" />
-          <h1 className="font-fraunces font-bold text-xl text-[#1E293B]">DishDekho</h1>
+          <img src="/dishdekho-icon.png" alt="DishDekho Logo" className="w-12 h-12 rounded-xl object-contain bg-white p-0.5 shadow-sm" />
+          <h1 className="font-fraunces font-bold text-xl text-[#0F2747]">DishDekho</h1>
         </div>
 
         <nav className="space-y-1">
@@ -106,13 +118,13 @@ function Sidebar({ active, navigate, signOut }: { active: string; navigate: (p: 
               onClick={() => (item as any).active && navigate(item.id === 'dashboard' ? '/dashboard' : '/')}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                 active === item.id 
-                ? 'bg-[#F1F5F9] text-[#2C4A2C] shadow-sm' 
+                ? 'bg-[#F1F5F9] text-[#FF6B00] shadow-sm' 
                 : (item as any).active 
-                  ? 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#1E293B]'
+                  ? 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#0F2747]'
                   : 'text-[#CBD5E1] cursor-not-allowed opacity-60'
               }`}
             >
-              <span className={active === item.id ? 'text-[#2C4A2C]' : 'text-[#94A3B8]'}>{item.icon}</span>
+              <span className={active === item.id ? 'text-[#FF6B00]' : 'text-[#94A3B8]'}>{item.icon}</span>
               <span className="font-outfit font-medium text-sm">{item.label}</span>
             </button>
           ))}
@@ -141,7 +153,7 @@ function Sidebar({ active, navigate, signOut }: { active: string; navigate: (p: 
         onClick={() => setMobileOpen(true)}
         className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md border border-[#F1F5F9]"
       >
-        <svg className="w-6 h-6 text-[#1E293B]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+        <svg className="w-6 h-6 text-[#0F2747]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
       </button>
 
       {/* Mobile Drawer */}
@@ -172,7 +184,7 @@ export default function RestaurantDashboardPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FFFFFF]">
         <div className="text-center">
-          <div className="w-12 h-12 rounded-2xl border-2 border-[#2C4A2C] border-t-transparent animate-spin mx-auto mb-6" />
+          <div className="w-12 h-12 rounded-2xl border-2 border-[#FF6B00] border-t-transparent animate-spin mx-auto mb-6" />
           <p className="font-outfit text-[#64748B] font-medium tracking-wide">Orchestrating your experience…</p>
         </div>
       </div>
@@ -186,8 +198,8 @@ export default function RestaurantDashboardPage() {
           <div className="w-16 h-16 bg-[#FEF2F2] text-[#EF4444] rounded-full flex items-center justify-center mx-auto mb-6">
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
           </div>
-          <p className="font-outfit font-semibold text-[#1E293B] mb-2">{error}</p>
-          <button onClick={() => navigate('/select-plan')} className="text-sm font-medium text-[#2C4A2C] underline decoration-[#2C4A2C60] underline-offset-4">
+          <p className="font-outfit font-semibold text-[#0F2747] mb-2">{error}</p>
+          <button onClick={() => navigate('/select-plan')} className="text-sm font-medium text-[#FF6B00] underline decoration-[#FF6B0060] underline-offset-4">
             Manage subscription
           </button>
         </div>
@@ -230,7 +242,7 @@ export default function RestaurantDashboardPage() {
 
 interface WrapperProps {
   owner: { id: string; ownerName: string; email?: string; restaurantId: string; createdAt: string }
-  restaurant: { id: string; name: string; slug: string; plan: string; qrUrl?: string; scanCount: number; createdAt: string }
+  restaurant: { id: string; name: string; slug: string; plan: string; qrUrl?: string; logoUrl?: string; heroTagline?: string; heroHeading1?: string; heroHeading2?: string; heroDescription?: string; scanCount: number; photosUsed: number; createdAt: string }
   subscription: { id: string; status: string; activatedAt?: string; nextBillingAt?: string; haltedAt?: string; amount: number } | null
   slots: DishSlot[]
   isHalted: boolean
@@ -248,7 +260,28 @@ function ProfileEditWrapper({
   isHalted, liveCount, memberSince,
   selectedSlot, setSelectedSlot, refetch, navigate, signOut,
 }: WrapperProps) {
-  const edit = useInlineEdit(owner.ownerName, restaurant.name)
+  const edit = useInlineEdit(owner.ownerName, restaurant.name, {
+    tagline: restaurant.heroTagline,
+    h1: restaurant.heroHeading1,
+    h2: restaurant.heroHeading2,
+    desc: restaurant.heroDescription
+  })
+  const hasDigitalMenu = restaurant.photosUsed > 0
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingLogo(true)
+    try {
+      await uploadRestaurantLogo(file)
+      refetch()
+    } catch (err) {
+      alert('Failed to upload logo')
+    } finally {
+      setUploadingLogo(false)
+    }
+  }
 
   return (
     <div className="p-4 sm:p-8 lg:p-12">
@@ -256,8 +289,8 @@ function ProfileEditWrapper({
         {/* ── Welcome Header ─────────────────────────────────────────────────── */}
         <section className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <h2 className="font-fraunces text-4xl font-bold text-[#1E293B] mb-2">
-              Welcome back, <span className="text-[#2C4A2C]">{owner.ownerName.split(' ')[0]}</span>
+            <h2 className="font-fraunces text-4xl font-bold text-[#0F2747] mb-2">
+              Welcome back, <span className="text-[#FF6B00]">{owner.ownerName.split(' ')[0]}</span>
             </h2>
             <p className="font-outfit text-[#64748B] text-lg">
               Manage your digital menu and augmented reality presence.
@@ -270,7 +303,7 @@ function ProfileEditWrapper({
                 </div>
                 <div>
                   <p className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider">Live Status</p>
-                  <p className="font-outfit text-sm font-bold text-[#1E293B]">{liveCount}/10 Dishes Active</p>
+                  <p className="font-outfit text-sm font-bold text-[#0F2747]">{liveCount}/{slots.length} Dishes Active</p>
                 </div>
              </div>
           </div>
@@ -299,7 +332,7 @@ function ProfileEditWrapper({
           <div className="lg:col-span-8 space-y-8">
             <div className="bg-white rounded-3xl p-8 shadow-sm border border-[#F1F5F9]">
               <div className="flex items-center justify-between mb-8">
-                <h3 className="font-fraunces text-xl font-bold text-[#1E293B]">Table and Menu Engagement</h3>
+                <h3 className="font-fraunces text-xl font-bold text-[#0F2747]">Table and Menu Engagement</h3>
                 <span className="text-xs font-bold text-[#94A3B8] uppercase tracking-widest bg-[#F8FAFC] px-3 py-1 rounded-full">Automated Tool</span>
               </div>
               
@@ -308,6 +341,7 @@ function ProfileEditWrapper({
                   qrUrl={restaurant.qrUrl}
                   restaurantName={restaurant.name}
                   slug={restaurant.slug}
+                  hasDigitalMenu={hasDigitalMenu}
                 />
               ) : (
                 <div className="h-48 flex flex-col items-center justify-center border-2 border-dashed border-[#E2E8F0] rounded-2xl bg-[#F8FAFC]">
@@ -316,17 +350,42 @@ function ProfileEditWrapper({
               )}
             </div>
 
+            {/* Digital Menu CTA */}
+            <div className="bg-[#0F2747] rounded-3xl p-8 shadow-sm border border-[#0F2747] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+              <div className="flex items-center gap-5">
+                <div className="w-14 h-14 flex-none rounded-2xl bg-white/10 flex items-center justify-center text-2xl">
+                  📋
+                </div>
+                <div>
+                  <h3 className="font-fraunces text-xl font-bold text-white">
+                    {hasDigitalMenu ? 'Your Digital Menu' : 'Create Your Digital Menu'}
+                  </h3>
+                  <p className="font-outfit text-sm text-white/60 mt-1 max-w-md">
+                    {hasDigitalMenu
+                      ? `${Math.max(0, 20 - restaurant.photosUsed)} of 20 photo uploads remaining. Edit dishes or scan more photos any time.`
+                      : 'Photograph your physical menu and let AI read the dishes, prices, and categories for you.'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate(hasDigitalMenu ? '/dashboard/digital-menu/edit' : '/dashboard/digital-menu')}
+                className="flex-none w-full sm:w-auto text-sm font-bold text-white bg-[#FF6B00] hover:bg-[#E85F00] transition-colors px-6 py-3 rounded-xl"
+              >
+                {hasDigitalMenu ? 'Edit Digital Menu' : 'Create Digital Menu'}
+              </button>
+            </div>
+
             {/* Dish Management Section */}
             <div>
               <div className="flex items-center justify-between mb-6">
-                <h3 className="font-fraunces text-2xl font-bold text-[#1E293B]">Dish Portfolio</h3>
+                <h3 className="font-fraunces text-2xl font-bold text-[#0F2747]">Dish Portfolio</h3>
                 <div className="flex items-center gap-4">
                   <div className="flex -space-x-2">
                     {slots.filter(s => s.status === 'glb_ready').slice(0, 3).map((_, i) => (
                       <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-[#F1F5F9]" />
                     ))}
                   </div>
-                  <span className="text-xs font-bold text-[#64748B]">{liveCount}/10 slots used</span>
+                  <span className="text-xs font-bold text-[#64748B]">{liveCount}/{slots.length} slots used</span>
                 </div>
               </div>
 
@@ -345,7 +404,7 @@ function ProfileEditWrapper({
 
           {/* Account/Admin Section (right) */}
           <div className="lg:col-span-4 space-y-8">
-            <div className="bg-[#1E293B] rounded-3xl p-8 text-white shadow-xl shadow-[#1E293B20]">
+            <div className="bg-[#0F2747] rounded-3xl p-8 text-white shadow-xl shadow-[#0F274720]">
               <div className="flex items-center justify-between mb-8">
                 <p className="font-fraunces text-lg font-bold">Admin Panel</p>
                 <button
@@ -357,8 +416,36 @@ function ProfileEditWrapper({
               </div>
 
               <div className="space-y-6">
+                {/* Logo Upload */}
+                <div className="flex items-center gap-4">
+                  {restaurant.logoUrl ? (
+                    <img src={restaurant.logoUrl} alt="Logo" className="w-16 h-16 rounded-xl object-contain bg-white shadow-sm p-1" />
+                  ) : (
+                    <div className="w-16 h-16 rounded-xl bg-[#334155] flex items-center justify-center text-2xl">🏪</div>
+                  )}
+                  <div>
+                    <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-[#FFFFFF10] hover:bg-[#FFFFFF20] text-sm font-bold rounded-xl transition-colors">
+                      {uploadingLogo ? 'Uploading...' : 'Upload Logo'}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={uploadingLogo} />
+                    </label>
+                    <p className="text-[10px] text-[#94A3B8] mt-2">Max 10MB (PNG/JPG)</p>
+                  </div>
+                </div>
+
+                <div className="h-px bg-[#FFFFFF10] my-4" />
+
                 <AdminField label="Owner" value={edit.ownerName} editing={edit.editing} onChange={edit.setOwnerName} />
                 <AdminField label="Restaurant" value={edit.restaurantName} editing={edit.editing} onChange={edit.setRestaurantName} />
+                
+                {edit.editing && (
+                  <div className="pt-4 space-y-6">
+                    <p className="text-xs text-[#FF6B00] font-bold uppercase tracking-widest border-b border-[#FFFFFF10] pb-2">AR Menu Customization</p>
+                    <AdminField label="Hero Tagline (Max 5 words)" value={edit.heroTagline} editing={edit.editing} onChange={edit.setHeroTagline} maxWords={5} />
+                    <AdminField label="Hero Heading Line 1 (Max 2 words)" value={edit.heroHeading1} editing={edit.editing} onChange={edit.setHeroHeading1} maxWords={2} />
+                    <AdminField label="Hero Heading Line 2 (Max 3 words)" value={edit.heroHeading2} editing={edit.editing} onChange={edit.setHeroHeading2} maxWords={3} />
+                    <AdminField label="Hero Description" value={edit.heroDescription} editing={edit.editing} onChange={edit.setHeroDescription} />
+                  </div>
+                )}
                 
                 <div className="pt-6 border-t border-[#FFFFFF10] space-y-4">
                    <div className="flex justify-between items-center">
@@ -392,11 +479,11 @@ function ProfileEditWrapper({
             </div>
 
             <div className="bg-white rounded-3xl p-8 shadow-sm border border-[#F1F5F9]">
-               <h4 className="font-fraunces font-bold text-[#1E293B] mb-4">Customer Support</h4>
-               <p className="text-sm text-[#64748B] font-outfit leading-relaxed mb-6">Need assistance with your 3D models or menu logic? Reach us at <span className="text-[#2C4A2C] font-bold">+91 9971381635</span></p>
+               <h4 className="font-fraunces font-bold text-[#0F2747] mb-4">Customer Support</h4>
+               <p className="text-sm text-[#64748B] font-outfit leading-relaxed mb-6">Need assistance with your 3D models or menu logic? Reach us at <span className="text-[#FF6B00] font-bold">+91 9971381635</span></p>
                <a 
                  href="tel:+919971381635"
-                 className="w-full flex items-center justify-center py-4 rounded-2xl border border-[#F1F5F9] font-outfit font-bold text-sm text-[#1E293B] hover:bg-[#F8FAFC] transition-colors"
+                 className="w-full flex items-center justify-center py-4 rounded-2xl border border-[#F1F5F9] font-outfit font-bold text-sm text-[#0F2747] hover:bg-[#F8FAFC] transition-colors"
                >
                  Call Support Now
                </a>
@@ -421,7 +508,23 @@ function ProfileEditWrapper({
   )
 }
 
-function AdminField({ label, value, editing, onChange }: { label: string; value: string; editing: boolean; onChange: (v: string) => void }) {
+function AdminField({ label, value, editing, onChange, maxWords }: { label: string; value: string; editing: boolean; onChange: (v: string) => void; maxWords?: number }) {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (maxWords) {
+      const words = val.trim().split(/\s+/);
+      // If the user tries to type a new word beyond the limit, ignore the keystroke.
+      // We check words.length and ensure they aren't adding another character if it exceeds.
+      // But if they are just adding spaces or it's empty, we allow it.
+      if (val.trim().length > 0 && words.length > maxWords) {
+        // allow backspacing or editing existing words by strictly blocking length growth beyond maxWords?
+        // simply block if word count is exceeded
+        return;
+      }
+    }
+    onChange(val);
+  };
+
   return (
     <div className="space-y-2">
       <label className="text-[10px] text-[#94A3B8] font-bold uppercase tracking-[0.2em]">{label}</label>
@@ -429,8 +532,8 @@ function AdminField({ label, value, editing, onChange }: { label: string; value:
         <input 
           type="text" 
           value={value} 
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full bg-[#334155] border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#2C4A2C] outline-none"
+          onChange={handleChange}
+          className="w-full bg-[#334155] border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#FF6B00] outline-none"
         />
       ) : (
         <p className="font-outfit font-semibold text-lg">{value}</p>
@@ -490,7 +593,7 @@ function SlotCard({ slot, isHalted, onOpen }: { slot: DishSlot; isHalted: boolea
 
   return (
     <div
-      className="group bg-white rounded-[2rem] p-6 border border-[#F1F5F9] shadow-sm hover:shadow-xl hover:shadow-[#1e293b0a] transition-all duration-500 flex flex-col min-h-[280px]"
+      className="group bg-white rounded-[2rem] p-6 border border-[#F1F5F9] shadow-sm hover:shadow-xl hover:shadow-[#0F27470a] transition-all duration-500 flex flex-col min-h-[280px]"
       style={{ cursor: canUpload ? 'pointer' : 'default' }}
       onClick={canUpload ? onOpen : undefined}
     >
@@ -519,7 +622,7 @@ function SlotCard({ slot, isHalted, onOpen }: { slot: DishSlot; isHalted: boolea
                   </div>
                 )}
                 <div className="flex-1">
-                  <h4 className="font-fraunces text-xl font-bold text-[#1E293B] leading-tight group-hover:text-[#2C4A2C] transition-colors">
+                  <h4 className="font-fraunces text-xl font-bold text-[#0F2747] leading-tight group-hover:text-[#FF6B00] transition-colors">
                     {slot.dishName}
                   </h4>
                   {slot.description && (
@@ -565,7 +668,7 @@ function SlotCard({ slot, isHalted, onOpen }: { slot: DishSlot; isHalted: boolea
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="mt-6 w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-xs font-bold bg-[#1E293B] text-white hover:bg-[#2C4A2C] shadow-lg shadow-[#1e293b20] transition-all duration-300 transform active:scale-95"
+          className="mt-6 w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-xs font-bold bg-[#0F2747] text-white hover:bg-[#FF6B00] shadow-lg shadow-[#0F274720] transition-all duration-300 transform active:scale-95"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor font-bold"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
           View 3D Model

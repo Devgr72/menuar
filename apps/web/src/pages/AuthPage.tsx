@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ArrowLeft, BarChart, Box, Check, Images, IndianRupee, LayoutDashboard, QrCode, ShieldCheck } from "lucide-react";
 import { authClient, signIn } from "../lib/auth-client";
 
 interface Props {
@@ -14,10 +15,25 @@ export default function AuthPage({ mode }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  const RESEND_COOLDOWN_SECONDS = 30;
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => setResendCooldown((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown > 0]);
 
   useEffect(() => {
     if (location.pathname.includes("sign-in")) setActiveMode("sign-in");
@@ -29,53 +45,121 @@ export default function AuthPage({ mode }: Props) {
     setFormError(null);
     setFormSuccess(null);
     setIsRedirecting(false);
+    setNeedsVerification(false);
+    setResendSuccess(false);
+    setResendCooldown(0);
+    setOtp("");
     setEmail("");
     setPassword("");
     setName("");
+    setAcceptedTerms(false);
     navigate(m === "sign-in" ? "/sign-in" : "/sign-up");
   };
 
+  async function redirectPostAuth() {
+    try {
+      const { getMe } = await import('../api/client');
+      const { owner, subscription } = await getMe();
+      if (!owner) {
+        window.location.href = "/onboarding";
+      } else if (subscription?.status === 'active') {
+        window.location.href = "/dashboard";
+      } else {
+        // Note: The user refers to this phase as "onboarding" too,
+        // but we route to the strict plan selection page UX.
+        window.location.href = "/select-plan";
+      }
+    } catch (err) {
+      window.location.href = "/onboarding";
+    }
+  }
+
+  /** Sign-up requires accepting the policies — blocks both email and Google. */
+  function consentMissing(): boolean {
+    if (activeMode === "sign-up" && !acceptedTerms) {
+      setFormError("Please accept the Privacy Policy and Terms & Conditions to continue.");
+      return true;
+    }
+    return false;
+  }
+
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setFormLoading(true);
     setFormError(null);
+    if (consentMissing()) return;
+
+    setFormLoading(true);
     setFormSuccess(null);
     setIsRedirecting(false);
 
     try {
       if (activeMode === "sign-up") {
         const { error } = await authClient.signUp.email({ email, password, name });
-        if (error) throw new Error(error.message ?? "Sign up failed");
-        setFormSuccess("🎉 Account created! Setting up your workspace…");
-        setIsRedirecting(true);
-        // Give the session time to propagate, then redirect via full reload
-        setTimeout(() => { window.location.href = "/onboarding"; }, 1800);
+        if (error) {
+          if (error.code === 'USER_ALREADY_EXISTS' || error.message?.toLowerCase().includes('already exists') || error.message?.toLowerCase().includes('exists')) {
+            throw new Error("Email already registered. Please sign in instead.");
+          }
+          throw new Error(error.message ?? "Sign up failed");
+        }
+        setNeedsVerification(true);
+        setResendCooldown(RESEND_COOLDOWN_SECONDS);
+        setFormLoading(false);
       } else {
         const { error } = await signIn.email({ email, password });
-        if (error) throw new Error(error.message ?? "Invalid email or password");
-        setFormSuccess("✅ Signed in successfully! Redirecting…");
-        setIsRedirecting(true);
-        
-        try {
-          const { getMe } = await import('../api/client');
-          const { owner, subscription } = await getMe();
-          if (!owner) {
-            window.location.href = "/onboarding";
-          } else if (subscription?.status === 'active') {
-            window.location.href = "/dashboard";
-          } else {
-            // Note: The user refers to this phase as "onboarding" too, 
-            // but we route to the strict plan selection page UX.
-            window.location.href = "/select-plan";
+        if (error) {
+          if (error.code === "EMAIL_NOT_VERIFIED") {
+            setNeedsVerification(true);
+            setResendCooldown(RESEND_COOLDOWN_SECONDS);
+            setFormLoading(false);
+            await authClient.emailOtp.sendVerificationOtp({ email, type: "email-verification" });
+            return;
           }
-        } catch (err) {
-          window.location.href = "/onboarding";
+          if (error.code === "INVALID_EMAIL_OR_PASSWORD" || error.message?.toLowerCase().includes('invalid email or password')) {
+            throw new Error("Account not found or incorrect password. Please register first if you don't have an account.");
+          }
+          throw new Error(error.message ?? "Invalid email or password");
         }
+        setFormSuccess("Signed in successfully! Redirecting…");
+        setIsRedirecting(true);
+        await redirectPostAuth();
       }
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Authentication failed");
       setFormLoading(false);
       setIsRedirecting(false);
+    }
+  }
+
+  async function handleVerifyOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setVerifyLoading(true);
+    setFormError(null);
+    try {
+      const { error } = await authClient.emailOtp.verifyEmail({ email, otp });
+      if (error) throw new Error(error.message ?? "Invalid or expired code");
+      setFormSuccess("Email verified! Redirecting…");
+      setIsRedirecting(true);
+      await redirectPostAuth();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Invalid or expired code");
+      setVerifyLoading(false);
+    }
+  }
+
+  async function handleResendVerification() {
+    if (resendCooldown > 0) return;
+    setResendLoading(true);
+    setFormError(null);
+    setResendSuccess(false);
+    try {
+      const { error } = await authClient.emailOtp.sendVerificationOtp({ email, type: "email-verification" });
+      if (error) throw new Error(error.message ?? "Could not resend verification code");
+      setResendSuccess(true);
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Could not resend verification code");
+    } finally {
+      setResendLoading(false);
     }
   }
 
@@ -105,9 +189,9 @@ export default function AuthPage({ mode }: Props) {
         throw new Error(result.error.message ?? "Google authentication failed");
       }
 
-      setFormSuccess("✅ Signed in with Google! Redirecting…");
+      setFormSuccess("Signed in with Google! Redirecting…");
       setIsRedirecting(true);
-      
+
       try {
         const { getMe } = await import('../api/client');
         const { owner, subscription } = await getMe();
@@ -129,6 +213,7 @@ export default function AuthPage({ mode }: Props) {
 
   async function handleGoogle() {
     setFormError(null);
+    if (consentMissing()) return;
     // @ts-ignore
     if (window.google) {
       // @ts-ignore
@@ -141,285 +226,275 @@ export default function AuthPage({ mode }: Props) {
   const isSignUp = activeMode === "sign-up";
   const isDisabled = formLoading || !!formSuccess || isRedirecting;
 
+  const FIELD =
+    "h-[46px] w-full rounded-btn border border-dd-line bg-white px-4 text-[14px] text-dd-ink " +
+    "placeholder:text-[#9AA5B4] transition-colors focus:border-dd-orange focus:outline-none " +
+    "focus:ring-2 focus:ring-dd-orange/15 disabled:opacity-60";
+
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Space+Mono:wght@700&display=swap');
-        .auth-font { font-family: 'Sora', sans-serif; }
-        .mono-font { font-family: 'Space Mono', monospace; }
+    <div className="min-h-screen bg-dd-soft font-poppins text-dd-ink">
+      <div className="flex min-h-screen items-center justify-center p-4 sm:p-5">
+        <div className="grid w-full max-w-[1000px] overflow-hidden rounded-card border border-dd-line bg-white shadow-card lg:grid-cols-[minmax(0,42%)_minmax(0,58%)]">
 
-        @keyframes orbFloat {
-          0%,100% { transform: translate(0px, 0px) scale(1); }
-          33% { transform: translate(-25px, 18px) scale(1.03); }
-          66% { transform: translate(15px, -12px) scale(0.97); }
-        }
-        .orb-float { animation: orbFloat 12s ease-in-out infinite; }
-        .orb-float-reverse { animation: orbFloat 18s ease-in-out infinite reverse; }
+          {/* ── Brand panel ─────────────────────────────────────────────── */}
+          <div className="relative hidden flex-col justify-between bg-dd-navy p-10 lg:flex lg:p-12">
+            <div
+              className="pointer-events-none absolute inset-0 opacity-[0.06]"
+              style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '28px 28px' }}
+            />
 
-        @keyframes pulse-glow { 0%,100%{opacity:0.5} 50%{opacity:1} }
-        .badge-pulse { animation: pulse-glow 2s ease-in-out infinite; }
+            <Link to="/" className="relative flex items-center gap-3">
+              <span className="grid h-11 w-11 place-items-center overflow-hidden rounded-xl bg-white">
+                <img src="/dishdekho-icon.png" alt="" className="h-full w-full object-contain p-1" />
+              </span>
+              <span className="text-[13px] font-bold tracking-[0.2em] text-white/85">DISHDEKHO</span>
+            </Link>
 
-        @keyframes fadeSlideUp {
-          from { opacity:0; transform:translateY(16px); }
-          to   { opacity:1; transform:translateY(0); }
-        }
-        .fade-slide-up { animation: fadeSlideUp 0.5s cubic-bezier(0.23,1,0.32,1) forwards; }
-
-        @keyframes shimmer {
-          0%   { background-position: -200% center; }
-          100% { background-position: 200% center; }
-        }
-        .btn-shimmer {
-          background-size: 200% auto;
-          animation: shimmer 2.5s linear infinite;
-        }
-
-        @keyframes progressBar {
-          from { width: 0%; }
-          to   { width: 100%; }
-        }
-        .progress-bar { animation: progressBar 1.8s ease-in-out forwards; }
-
-        @keyframes checkIn {
-          0%   { transform: scale(0) rotate(-45deg); opacity: 0; }
-          60%  { transform: scale(1.2) rotate(5deg);  opacity: 1; }
-          100% { transform: scale(1)   rotate(0deg);  opacity: 1; }
-        }
-        .check-in { animation: checkIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
-
-        @keyframes dotPulse {
-          0%,100% { transform: scale(0.8); opacity: 0.4; }
-          50%     { transform: scale(1.2); opacity: 1; }
-        }
-        .dot-1 { animation: dotPulse 1.2s ease-in-out infinite 0s; }
-        .dot-2 { animation: dotPulse 1.2s ease-in-out infinite 0.2s; }
-        .dot-3 { animation: dotPulse 1.2s ease-in-out infinite 0.4s; }
-
-        .input-focus {
-          transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-        }
-        .input-focus:focus {
-          border-color: rgba(107,60,255,0.5);
-          box-shadow: 0 0 0 3px rgba(107,60,255,0.12);
-          background: rgba(255,255,255,0.06);
-          outline: none;
-        }
-
-        .google-btn {
-          position: relative;
-          overflow: hidden;
-        }
-        .google-btn::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%);
-          transform: translateX(-100%);
-          transition: transform 0.5s ease;
-        }
-        .google-btn:not(:disabled):hover::after {
-          transform: translateX(100%);
-        }
-      `}</style>
-
-      <div className="auth-font min-h-screen flex items-center justify-center p-4 bg-[#07090f] relative overflow-hidden">
-
-        {/* Background orbs */}
-        <div className="absolute top-[-10%] left-[-5%] w-[600px] h-[600px] bg-[#6b3cff]/10 rounded-full blur-[140px] orb-float pointer-events-none" />
-        <div className="absolute bottom-[-5%] right-[-5%] w-[450px] h-[450px] bg-[#00c896]/10 rounded-full blur-[120px] orb-float-reverse pointer-events-none" />
-        <div className="absolute top-[40%] left-[50%] w-[300px] h-[300px] bg-[#f59e0b]/5 rounded-full blur-[100px] orb-float pointer-events-none" style={{animationDelay: '-4s'}} />
-
-        <div className="relative w-full max-w-[960px] flex flex-col md:flex-row bg-[#0d0f1a]/98 rounded-[32px] overflow-hidden border border-white/[0.07] shadow-[0_50px_150px_rgba(0,0,0,0.9)] z-10">
-
-          {/* LEFT PANEL — slides on mode toggle */}
-          <div
-            className={`hidden md:flex flex-col justify-between p-12 w-[42%] border-white/[0.05] relative overflow-hidden transition-all duration-[800ms] ease-[cubic-bezier(0.23,1,0.32,1)] z-20 ${isSignUp ? 'md:translate-x-0 border-r' : 'md:translate-x-[138%] border-l'}`}
-            style={{ background: "linear-gradient(160deg, rgba(107,60,255,0.15) 0%, rgba(0,200,150,0.08) 100%)" }}
-          >
-            {/* Dot grid */}
-            <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
-
-            {/* Logo */}
-            <div className="relative flex items-center gap-3">
-              <img src="/dishdekho.jpeg" alt="DishDekho" className="w-10 h-10 rounded-xl object-cover border border-white/10 shadow-[0_0_20px_rgba(255,255,255,0.05)]" />
-              <span className="mono-font text-white text-[13px] font-bold tracking-[0.2em] opacity-80">DISHDEKHO</span>
-            </div>
-
-            <div key={activeMode} className="relative space-y-6 fade-slide-up">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#6b3cff]/20 border border-[#6b3cff]/30 text-[#a78bff] text-[10px] uppercase font-bold tracking-widest">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#a78bff] badge-pulse" />
-                {isSignUp ? "New Here?" : "Welcome Back"}
-              </div>
-              <h2 className="text-[32px] font-extrabold text-white leading-[1.1] tracking-tight">
+            <div className="relative mt-12 space-y-6">
+              <h2 className="text-[30px] font-bold leading-[1.15] text-white">
                 {isSignUp ? (
-                  <>Experience food in <br /><span className="bg-gradient-to-r from-[#a78bff] to-[#00c896] bg-clip-text text-transparent">augmented reality</span></>
+                  <>Experience food in <span className="text-dd-orange">augmented reality</span></>
                 ) : (
-                  <>Good to see <br />you <span className="bg-gradient-to-r from-[#a78bff] to-[#00c896] bg-clip-text text-transparent">again!</span></>
+                  <>Good to see you <span className="text-dd-orange">again!</span></>
                 )}
               </h2>
-              <p className="text-white/40 text-[14px] leading-relaxed max-w-[280px]">
+              <p className="max-w-[300px] text-[14px] leading-[1.85] text-white/55">
                 {isSignUp
-                  ? "Create your account and step into a new dimension of restaurant ordering."
-                  : "Sign in to manage your digital AR menus and gain insights into guest interactions."}
+                  ? "Create your account and turn your menu into an AR experience your guests will remember."
+                  : "Sign in to manage your digital AR menu and see how guests are interacting with it."}
               </p>
-              <div className="space-y-5 pt-3">
-                {[
-                  { icon: "🍱", title: "3D Dish Previews", desc: "Visualize your entire meal in 3D right on your dining table." },
-                  { icon: "⚡", title: "App-Free Access", desc: "Just scan a QR and dive in—no downloads required." },
-                ].map((item, idx) => (
-                  <div key={idx} className="flex items-start gap-4 group">
-                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-[16px] group-hover:bg-[#6b3cff]/20 group-hover:scale-110 transition-all duration-300 flex-shrink-0">{item.icon}</div>
+
+              <ul className="space-y-5 pt-2">
+                {(isSignUp
+                  ? [
+                      { Icon: Box, title: "3D Dish Previews", desc: "Guests see the dish on their table before ordering." },
+                      { Icon: QrCode, title: "App-Free Access", desc: "Just scan a QR code — nothing to download." },
+                      { Icon: IndianRupee, title: "One Simple Price", desc: "₹999/month — no setup fee, cancel anytime." },
+                    ]
+                  : [
+                      { Icon: LayoutDashboard, title: "Live Menu Control", desc: "Update dishes, prices and photos anytime." },
+                      { Icon: BarChart, title: "Scan Insights", desc: "See how many guests scanned and viewed your menu." },
+                      { Icon: Images, title: "Manage Dish Photos", desc: "Upload photos and we build the 3D models." },
+                    ]
+                ).map(({ Icon, title, desc }) => (
+                  <li key={title} className="flex items-start gap-4">
+                    <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-white/10">
+                      <Icon className="h-[18px] w-[18px] text-dd-orange" strokeWidth={1.8} />
+                    </span>
                     <div>
-                      <p className="text-white/80 text-[13px] font-bold leading-tight group-hover:text-white transition-colors">{item.title}</p>
-                      <p className="text-white/25 text-[11px] mt-1 leading-snug">{item.desc}</p>
+                      <p className="text-[13.5px] font-bold text-white">{title}</p>
+                      <p className="mt-1 text-[12px] leading-snug text-white/45">{desc}</p>
                     </div>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
 
-            <div className="relative flex gap-2">
-              <button onClick={() => toggleMode('sign-up')} className={`px-6 py-2 rounded-xl text-[13px] font-bold transition-all duration-300 ${isSignUp ? 'bg-[#6b3cff] text-white shadow-[0_0_20px_rgba(107,60,255,0.4)]' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}>Sign Up</button>
-              <button onClick={() => toggleMode('sign-in')} className={`px-6 py-2 rounded-xl text-[13px] font-bold transition-all duration-300 ${!isSignUp ? 'bg-[#6b3cff] text-white shadow-[0_0_20px_rgba(107,60,255,0.4)]' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}>Sign In</button>
-            </div>
+            <p className="relative mt-12 text-[11px] font-semibold uppercase tracking-widest text-white/25">
+              © {new Date().getFullYear()} DishDekho
+            </p>
           </div>
 
-          {/* RIGHT PANEL — form */}
-          <div className={`flex-1 p-10 md:p-14 flex flex-col justify-center transition-all duration-[800ms] ease-[cubic-bezier(0.23,1,0.32,1)] ${isSignUp ? 'md:translate-x-0' : 'md:translate-x-[-72.4%]'}`}>
-            <div key={activeMode} className="w-full fade-slide-up">
-              <div className="mb-8">
-                <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-[28px] font-extrabold text-white tracking-tight">
-                    {isSignUp ? "Create Account" : "Welcome Back"}
-                  </h1>
-                  {isSignUp && (
-                    <span className="px-2.5 py-0.5 rounded-md bg-[#00c896]/15 border border-[#00c896]/20 text-[#00c896] text-[10px] font-black uppercase tracking-widest">FREE</span>
-                  )}
+          {/* ── Form panel ──────────────────────────────────────────────── */}
+          <div className="flex flex-col justify-center p-6 sm:p-8 lg:px-10 lg:py-8 relative">
+            <Link to="/" className="absolute top-4 right-4 sm:top-6 sm:right-6 lg:top-8 lg:right-8 flex items-center gap-1.5 text-[12px] font-semibold text-dd-muted hover:text-dd-navy transition-colors">
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back
+            </Link>
+
+            {/* Brand panel is hidden below md — repeat the mark here */}
+            <Link to="/" className="mb-6 flex items-center gap-3 lg:hidden mt-4 sm:mt-0">
+              <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-xl bg-dd-soft">
+                <img src="/dishdekho-icon.png" alt="" className="h-full w-full object-contain p-1" />
+              </span>
+              <span className="text-[13px] font-bold tracking-[0.2em] text-dd-navy">DISHDEKHO</span>
+            </Link>
+
+            {/* Mode switch */}
+            <h1 className="text-[23px] font-bold tracking-tight text-dd-navy sm:text-[25px]">
+              {isSignUp ? "Create Account" : "Welcome Back"}
+            </h1>
+            <p className="mt-1.5 text-[13.5px] text-dd-muted">
+              {isSignUp ? "Start your AR menu in a few minutes." : "Sign in to your restaurant dashboard."}
+            </p>
+
+            {needsVerification ? (
+              <div className="mt-7 rounded-card border border-dd-orange/25 bg-dd-orange-lt/60 p-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-[14.5px] font-bold text-dd-navy">Verify your email</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNeedsVerification(false);
+                      setOtp("");
+                    }}
+                    disabled={verifyLoading || isRedirecting}
+                    className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-dd-muted hover:text-dd-navy disabled:opacity-50 transition-colors"
+                  >
+                    <ArrowLeft className="h-3 w-3" strokeWidth={2.5} />
+                    Back
+                  </button>
                 </div>
-                <p className="text-white/30 text-[14px] font-medium">
-                  Start your <span className="text-[#a78bff] font-bold">AR experience</span> today
+                <p className="mt-2 text-[13px] leading-relaxed text-dd-muted">
+                  We sent a 6-digit code to <span className="font-semibold text-dd-navy">{email}</span>. Enter it below to activate your account.
                 </p>
-              </div>
-
-              {/* Success banner with progress bar */}
-              {formSuccess && (
-                <div className="mb-5 rounded-xl bg-[#00c896]/10 border border-[#00c896]/30 overflow-hidden">
-                  <div className="flex items-center gap-3 px-4 py-3">
-                    <div className="w-5 h-5 rounded-full bg-[#00c896] flex items-center justify-center flex-shrink-0 check-in">
-                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <span className="text-[#00c896] font-bold text-[13px] flex-1">{formSuccess}</span>
-                    <div className="flex items-center gap-1">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#00c896] dot-1" />
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#00c896] dot-2" />
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#00c896] dot-3" />
-                    </div>
-                  </div>
-                  {isRedirecting && (
-                    <div className="h-0.5 bg-[#00c896]/20">
-                      <div className="h-full bg-[#00c896] progress-bar" />
-                    </div>
+                <form onSubmit={handleVerifyOtp} className="mt-4 flex flex-col gap-3">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    required
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                    placeholder="000000"
+                    disabled={verifyLoading || isRedirecting}
+                    className="h-14 rounded-btn border border-dd-line bg-white text-center text-[20px] font-bold tracking-[0.4em] text-dd-navy placeholder:text-[#C7CFD9] focus:border-dd-orange focus:outline-none focus:ring-2 focus:ring-dd-orange/15 disabled:opacity-60"
+                  />
+                  <button
+                    type="submit"
+                    disabled={verifyLoading || isRedirecting || otp.length !== 6}
+                    className="h-12 rounded-btn bg-dd-orange text-[14px] font-semibold text-white transition-colors hover:bg-dd-orange-dk disabled:opacity-50"
+                  >
+                    {verifyLoading ? "Verifying…" : "Verify Email"}
+                  </button>
+                </form>
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    disabled={resendLoading || resendCooldown > 0}
+                    className="text-[13px] font-bold text-dd-orange hover:underline disabled:opacity-50 disabled:hover:no-underline"
+                  >
+                    {resendLoading
+                      ? "Resending…"
+                      : resendCooldown > 0
+                        ? `Resend code in ${resendCooldown}s`
+                        : "Resend code"}
+                  </button>
+                  {resendSuccess && resendCooldown > 0 && (
+                    <p className="mt-1 text-[12px] font-bold text-[#1F9254]">Code resent — check your inbox.</p>
                   )}
                 </div>
-              )}
+                {formError && <p className="mt-3 text-[13px] font-medium text-[#D93025]">{formError}</p>}
+              </div>
+            ) : (
+              <>
+                {formSuccess && (
+                  <div className="mt-6 flex items-center gap-3 rounded-btn border border-[#1F9254]/25 bg-[#1F9254]/10 px-4 py-3">
+                    <span className="grid h-5 w-5 flex-none place-items-center rounded-full bg-[#1F9254]">
+                      <Check className="h-3 w-3 text-white" strokeWidth={3} />
+                    </span>
+                    <span className="text-[13px] font-semibold text-[#1F9254]">{formSuccess}</span>
+                  </div>
+                )}
 
-              <form onSubmit={handleEmailSubmit} className="flex flex-col gap-4">
-                {isSignUp && (
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/30">Full Name</label>
+                <form onSubmit={handleEmailSubmit} className="mt-5 flex flex-col gap-3">
+                  {isSignUp && (
+                    <div className="flex flex-col gap-1">
+                      <label htmlFor="auth-name" className="text-[11.5px] font-semibold text-dd-navy">Full Name</label>
+                      <input
+                        id="auth-name"
+                        type="text"
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Jane Smith"
+                        disabled={isDisabled}
+                        className={FIELD}
+                      />
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-1">
+                    <label htmlFor="auth-email" className="text-[11.5px] font-semibold text-dd-navy">Email</label>
                     <input
-                      type="text"
+                      id="auth-email"
+                      type="email"
                       required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Jane Smith"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@restaurant.com"
                       disabled={isDisabled}
-                      className="input-focus h-14 rounded-xl bg-white/[0.03] border border-white/[0.07] text-white/90 placeholder:text-white/25 px-5 disabled:opacity-50"
+                      className={FIELD}
                     />
                   </div>
-                )}
-                <div className="flex flex-col gap-2">
-                  <label className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/30">Email</label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@restaurant.com"
-                    disabled={isDisabled}
-                    className="input-focus h-14 rounded-xl bg-white/[0.03] border border-white/[0.07] text-white/90 placeholder:text-white/25 px-5 disabled:opacity-50"
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/30">Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    disabled={isDisabled}
-                    className="input-focus h-14 rounded-xl bg-white/[0.03] border border-white/[0.07] text-white/90 placeholder:text-white/25 px-5 disabled:opacity-50"
-                  />
-                </div>
-
-                {formError && (
-                  <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 fade-slide-up">
-                    <svg className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="text-red-400 text-[13px] font-medium">{formError}</span>
+                  <div className="flex flex-col gap-1">
+                    <label htmlFor="auth-password" className="text-[11.5px] font-semibold text-dd-navy">Password</label>
+                    <input
+                      id="auth-password"
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      disabled={isDisabled}
+                      className={FIELD}
+                    />
                   </div>
-                )}
 
-                <button
-                  type="submit"
-                  disabled={isDisabled}
-                  className="h-14 rounded-xl text-white font-bold text-[15px] mt-2 transition-all duration-300 disabled:opacity-70 flex items-center justify-center gap-2 relative overflow-hidden"
-                  style={{
-                    background: formSuccess
-                      ? 'linear-gradient(135deg, #00c896, #00a878)'
-                      : 'linear-gradient(135deg, #6b3cff 0%, #8b5cf6 50%, #6b3cff 100%)',
-                    boxShadow: formSuccess
-                      ? '0 0 30px rgba(0,200,150,0.35)'
-                      : '0 0 30px rgba(107,60,255,0.3)',
-                    backgroundSize: '200% auto',
-                  }}
-                >
-                  {formLoading && !formSuccess ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                      <span>{isSignUp ? "Creating account…" : "Signing in…"}</span>
-                    </>
-                  ) : formSuccess ? (
-                    <>
-                      <svg className="w-4 h-4 check-in" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span>{isSignUp ? "Account created!" : "Signed in!"}</span>
-                    </>
-                  ) : (
-                    <span>{isSignUp ? "Create Account" : "Sign In"}</span>
+                  {/* Policy consent — required before an account can be created */}
+                  {isSignUp && (
+                    <label className="flex cursor-pointer items-start gap-3 rounded-btn border border-dd-line bg-dd-soft/60 px-3.5 py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={acceptedTerms}
+                        onChange={(e) => {
+                          setAcceptedTerms(e.target.checked);
+                          if (e.target.checked) setFormError(null);
+                        }}
+                        disabled={isDisabled}
+                        className="mt-0.5 h-[17px] w-[17px] flex-none cursor-pointer accent-dd-orange"
+                      />
+                      <span className="text-[12px] leading-relaxed text-dd-muted">
+                        I have read and agree to the{" "}
+                        <Link to="/privacy" target="_blank" className="font-semibold text-dd-orange hover:underline">
+                          Privacy Policy
+                        </Link>{" "}
+                        and{" "}
+                        <Link to="/terms" target="_blank" className="font-semibold text-dd-orange hover:underline">
+                          Terms &amp; Conditions
+                        </Link>
+                        .
+                      </span>
+                    </label>
                   )}
-                </button>
-              </form>
 
-              <div className="flex items-center gap-4 my-5">
-                <div className="flex-1 h-px bg-white/[0.05]" />
-                <span className="text-white/20 text-[10px] font-black uppercase tracking-[0.2em]">or</span>
-                <div className="flex-1 h-px bg-white/[0.05]" />
-              </div>
+                  {formError && (
+                    <div className="flex items-start gap-3 rounded-btn border border-[#D93025]/20 bg-[#D93025]/[0.07] px-4 py-3">
+                      <ShieldCheck className="mt-0.5 h-4 w-4 flex-none text-[#D93025]" strokeWidth={2} />
+                      <span className="text-[13px] font-medium text-[#D93025]">{formError}</span>
+                    </div>
+                  )}
 
-              <div className="relative group">
+                  <button
+                    type="submit"
+                    disabled={isDisabled}
+                    className="mt-1 flex h-[48px] items-center justify-center gap-2 rounded-btn bg-dd-orange text-[14.5px] font-semibold text-white shadow-btn transition-all hover:bg-dd-orange-dk disabled:opacity-70"
+                  >
+                    {formLoading && !formSuccess ? (
+                      <>
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                        {isSignUp ? "Creating account…" : "Signing in…"}
+                      </>
+                    ) : (
+                      <span>{isSignUp ? "Create Account" : "Sign In"}</span>
+                    )}
+                  </button>
+                </form>
+
+                <div className="my-4 flex items-center gap-4">
+                  <span className="h-px flex-1 bg-dd-line" />
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-dd-muted">or</span>
+                  <span className="h-px flex-1 bg-dd-line" />
+                </div>
+
                 <button
                   type="button"
                   onClick={handleGoogle}
                   disabled={isDisabled}
-                  className="google-btn w-full h-14 rounded-xl border border-white/[0.07] bg-white/[0.03] hover:bg-white/[0.06] text-white/60 font-semibold text-[14px] transition-all duration-300 disabled:opacity-40 flex items-center justify-center gap-3"
+                  className="flex h-[46px] w-full items-center justify-center gap-3 rounded-btn border border-dd-line bg-white text-[14px] font-semibold text-dd-navy transition-colors hover:border-dd-orange hover:bg-dd-soft disabled:opacity-50"
                 >
-                  <svg className="w-5 h-5 opacity-60" viewBox="0 0 24 24">
+                  <svg className="h-5 w-5" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -427,25 +502,28 @@ export default function AuthPage({ mode }: Props) {
                   </svg>
                   Continue with Google
                 </button>
-              </div>
-            </div>
 
-            {/* Mobile footer toggle */}
-            <p className="md:hidden text-center mt-10 text-white/20 text-[13px]">
-              {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
-              <button onClick={() => toggleMode(isSignUp ? 'sign-in' : 'sign-up')} className="text-[#a78bff] font-black hover:underline ml-1">
-                {isSignUp ? "Sign In" : "Sign Up"}
-              </button>
-            </p>
+                <p className="mt-5 text-center text-[13px] text-dd-muted">
+                  {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+                  <button
+                    type="button"
+                    onClick={() => toggleMode(isSignUp ? 'sign-in' : 'sign-up')}
+                    className="font-semibold text-dd-orange hover:underline"
+                  >
+                    {isSignUp ? "Please sign in" : "Sign up"}
+                  </button>
+                </p>
+              </>
+            )}
 
-            <div className="mt-10 flex items-center justify-center gap-8 text-white/10">
-              <a href="#" className="text-[10px] font-black uppercase tracking-widest hover:text-white/30 transition-colors">Help</a>
-              <a href="#" className="text-[10px] font-black uppercase tracking-widest hover:text-white/30 transition-colors">Privacy</a>
-              <p className="text-[10px] font-black uppercase tracking-widest">© 2026 DISHDEKHO</p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11px] font-medium text-dd-muted">
+              <Link to="/" className="hover:text-dd-orange">Home</Link>
+              <Link to="/privacy" className="hover:text-dd-orange">Privacy Policy</Link>
+              <Link to="/terms" className="hover:text-dd-orange">Terms &amp; Conditions</Link>
             </div>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

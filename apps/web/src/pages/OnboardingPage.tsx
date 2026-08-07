@@ -57,8 +57,8 @@ export default function OnboardingPage() {
 
   if (isPending) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #f0f7ff 0%, #f8fafc 60%, #fff7ed 100%)' }}>
-        <div className="w-8 h-8 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin" style={{ borderWidth: 3 }} />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FFF8F3 0%, #FFFFFF 55%, #FFF1E6 100%)' }}>
+        <div className="w-8 h-8 border-3 border-[#FFD9BF] border-t-[#FF6B00] rounded-full animate-spin" style={{ borderWidth: 3 }} />
       </div>
     )
   }
@@ -68,7 +68,7 @@ export default function OnboardingPage() {
       className="min-h-screen flex flex-col"
       style={{
         fontFamily: "'Inter', 'Poppins', sans-serif",
-        background: 'linear-gradient(135deg, #f0f7ff 0%, #f8fafc 60%, #fff7ed 100%)',
+        background: 'linear-gradient(135deg, #FFF8F3 0%, #FFFFFF 55%, #FFF1E6 100%)',
       }}
     >
       <style>{`
@@ -113,8 +113,8 @@ export default function OnboardingPage() {
           outline: none;
         }
         .input-field:focus {
-          border-color: #2563eb;
-          box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+          border-color: #FF6B00;
+          box-shadow: 0 0 0 3px rgba(255,107,0,0.12);
           background: #fff;
         }
         .input-field::placeholder { color: #94a3b8; }
@@ -124,16 +124,16 @@ export default function OnboardingPage() {
       {/* Header */}
       <header className="flex items-center gap-3 px-6 py-5" style={{ background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(148,163,184,0.2)' }}>
         <img
-          src="/dishdekho.jpeg"
+          src="/dishdekho-icon.png"
           alt="DishDekho"
-          className="h-9 w-9 rounded-xl object-cover"
+          className="h-9 w-9 rounded-xl object-contain bg-white p-0.5"
           style={{ border: '1px solid #f1f5f9', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
         />
         <div>
           <p style={{ fontSize: '1.1rem', fontWeight: 800, lineHeight: 1 }}>
-            <span style={{ color: '#f59e0b' }}>Dish</span>
-            <span style={{ color: '#0f172a' }}>Dekho</span>
+            <span style={{ color: '#FF6B00' }}>Dish</span>
+            <span style={{ color: '#0F2747' }}>Dekho</span>
           </p>
           <p style={{ color: '#94a3b8', fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2 }}>
             AR Restaurant Menus
@@ -158,7 +158,7 @@ export default function OnboardingPage() {
                     width: 28, height: 28, borderRadius: '50%',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 12, fontWeight: 700,
-                    background: step.done ? '#22c55e' : step.active ? '#2563eb' : '#e2e8f0',
+                    background: step.done ? '#22c55e' : step.active ? '#FF6B00' : '#e2e8f0',
                     color: step.done || step.active ? '#fff' : '#94a3b8',
                     transition: 'all 0.3s',
                   }}>
@@ -166,7 +166,7 @@ export default function OnboardingPage() {
                   </div>
                   <span style={{
                     fontSize: 12, fontWeight: 600, display: 'none',
-                    color: step.done ? '#22c55e' : step.active ? '#2563eb' : '#94a3b8',
+                    color: step.done ? '#22c55e' : step.active ? '#FF6B00' : '#94a3b8',
                   }} className="sm:inline">{step.label}</span>
                 </div>
                 {i < 2 && <div style={{ width: 32, height: 1, background: '#e2e8f0' }} />}
@@ -177,11 +177,11 @@ export default function OnboardingPage() {
           {/* Card */}
           <div style={{ background: '#fff', borderRadius: 24, border: '1px solid #e2e8f0', boxShadow: '0 20px 60px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
             {/* Progress bar at top */}
-            <div style={{ height: 4, background: '#f0f7ff' }}>
+            <div style={{ height: 4, background: '#FFF1E6' }}>
               {success ? (
-                <div style={{ height: '100%', background: 'linear-gradient(90deg, #2563eb, #22c55e)', width: '100%', transition: 'width 1.2s ease' }} />
+                <div style={{ height: '100%', background: 'linear-gradient(90deg, #FF6B00, #22c55e)', width: '100%', transition: 'width 1.2s ease' }} />
               ) : (
-                <div style={{ height: '100%', background: 'linear-gradient(90deg, #2563eb, #60a5fa, #f59e0b)', width: '55%' }} />
+                <div style={{ height: '100%', background: 'linear-gradient(90deg, #FF6B00, #FF8A3D, #FF6B00)', width: '55%' }} />
               )}
             </div>
 
@@ -199,18 +199,18 @@ export default function OnboardingPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>Restaurant Created! 🎉</h2>
+                  <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F2747', marginBottom: 8 }}>Restaurant Created! 🎉</h2>
                   <p style={{ color: '#64748b', fontSize: 14, marginBottom: 24 }}>Taking you to plan selection…</p>
                   <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563eb' }} className="dot-b1" />
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563eb' }} className="dot-b2" />
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563eb' }} className="dot-b3" />
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#FF6B00' }} className="dot-b1" />
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#FF6B00' }} className="dot-b2" />
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#FF6B00' }} className="dot-b3" />
                   </div>
                 </div>
               ) : (
                 <>
                   <div style={{ marginBottom: 28 }}>
-                    <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.2, letterSpacing: '-0.02em' }}>
+                    <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0F2747', lineHeight: 1.2, letterSpacing: '-0.02em' }}>
                       Set up your restaurant
                     </h1>
                     <p style={{ color: '#64748b', fontSize: 14, marginTop: 6 }}>
@@ -279,8 +279,8 @@ export default function OnboardingPage() {
                         cursor: loading ? 'not-allowed' : 'pointer',
                         background: loading
                           ? '#93c5fd'
-                          : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                        boxShadow: loading ? 'none' : '0 8px 24px rgba(37,99,235,0.3)',
+                          : 'linear-gradient(135deg, #FF6B00 0%, #E85F00 100%)',
+                        boxShadow: loading ? 'none' : '0 8px 24px rgba(255,107,0,0.3)',
                         transition: 'all 0.2s',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                         marginTop: 4,

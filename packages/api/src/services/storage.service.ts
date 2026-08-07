@@ -1,21 +1,10 @@
 /**
- * Storage abstraction — local disk now, swap to R2 by setting USE_R2=true.
- * All functions return a public-accessible URL to the stored file.
+ * Storage abstraction — Cloudflare R2 only. All functions return a public CDN URL.
  */
-import fs from 'fs';
-import path from 'path';
-
-const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
-
-// Ensure base directories exist
-['originals', 'cleaned', 'models', 'photos', 'qr'].forEach((sub) => {
-  fs.mkdirSync(path.join(UPLOADS_DIR, sub), { recursive: true });
-});
-
-const API_URL = process.env.API_URL ?? `http://localhost:${process.env.PORT ?? 3001}`;
+import { uploadToR2, deleteFromR2, isR2Configured } from './r2.service.js';
 
 /**
- * Save a file to local disk or R2.
+ * Save a file to R2.
  * @param subdir - arbitrary path like "photos/restaurantId/slot-1" or "qr/restaurantId"
  */
 export async function saveFile(
@@ -23,47 +12,21 @@ export async function saveFile(
   filename: string,
   buffer: Buffer,
 ): Promise<{ key: string; url: string }> {
+  if (!isR2Configured()) {
+    throw new Error(
+      'Cloudflare R2 is not configured — set CLOUDFLARE_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL',
+    );
+  }
+
   const key = `${subdir}/${filename}`;
-
-  if (process.env.USE_R2 === 'true') {
-    const { uploadToR2 } = await import('./r2.service.js');
-    const contentType = getContentType(filename);
-    const url = await uploadToR2(key, buffer, contentType);
-    return { key, url };
-  }
-
-  // Local disk
-  const dir = path.join(UPLOADS_DIR, subdir);
-  fs.mkdirSync(dir, { recursive: true });
-  const filePath = path.join(dir, filename);
-  fs.writeFileSync(filePath, buffer);
-  return {
-    key,
-    url: `${API_URL}/uploads/${key}`,
-  };
+  const contentType = getContentType(filename);
+  const url = await uploadToR2(key, buffer, contentType);
+  return { key, url };
 }
 
-/**
- * Delete a file from local disk or R2.
- * Silently ignores missing files.
- */
+/** Delete a file from R2. Silently ignores missing files. */
 export async function deleteFile(key: string): Promise<void> {
-  if (process.env.USE_R2 === 'true') {
-    const { deleteFromR2 } = await import('./r2.service.js');
-    await deleteFromR2(key);
-    return;
-  }
-
-  const filePath = path.join(UPLOADS_DIR, key);
-  try {
-    fs.unlinkSync(filePath);
-  } catch {
-    // File may not exist — ignore
-  }
-}
-
-export function uploadsDir(): string {
-  return UPLOADS_DIR;
+  await deleteFromR2(key).catch(() => {});
 }
 
 function getContentType(filename: string): string {

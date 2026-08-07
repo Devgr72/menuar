@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { PrismaClient } from '@prisma/client';
-import { requireAuth } from '../middleware/auth';
-import { saveFile } from '../services/storage.service';
+import { Restaurant, RestaurantOwner, Subscription, DishSlot } from '../db/models/index.js';
+import { requireAuth } from '../middleware/auth.js';
+import { saveFile } from '../services/storage.service.js';
+import { toId, toIds } from '../db/serialize.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -24,52 +24,57 @@ router.get('/dashboard', requireAuth, async (req, res) => {
   const userId = res.locals.userId as string;
 
   try {
-    const owner = await prisma.restaurantOwner.findUnique({
-      where: { userId: userId },
-      include: {
-        restaurant: {
-          include: {
-            subscription: true,
-            slots: { orderBy: { slotNumber: 'asc' } },
-          },
-        },
-      },
-    });
-
+    const owner = await RestaurantOwner.findOne({ userId }).lean();
     if (!owner) {
       res.status(404).json({ error: 'Not registered', code: 'NOT_REGISTERED' });
       return;
     }
 
-const resOwner = owner as any;
+    const [restaurant, subscription, slots] = await Promise.all([
+      Restaurant.findById(owner.restaurantId).lean(),
+      Subscription.findOne({ restaurantId: owner.restaurantId }).lean(),
+      DishSlot.find({ restaurantId: owner.restaurantId }).sort({ slotNumber: 1 }).lean(),
+    ]);
+
+    if (!restaurant) {
+      res.status(404).json({ error: 'Not registered', code: 'NOT_REGISTERED' });
+      return;
+    }
+
     res.json({
       owner: {
-        id: resOwner.id,
-        ownerName: resOwner.ownerName,
-        email: resOwner.email,
-        restaurantId: resOwner.restaurantId,
-        createdAt: resOwner.createdAt,
+        id: owner._id,
+        ownerName: owner.ownerName,
+        email: owner.email,
+        restaurantId: owner.restaurantId,
+        createdAt: owner.createdAt,
       },
       restaurant: {
-        id: resOwner.restaurant.id,
-        name: resOwner.restaurant.name,
-        slug: resOwner.restaurant.slug,
-        plan: resOwner.restaurant.plan,
-        qrUrl: resOwner.restaurant.qrUrl,
-        scanCount: resOwner.restaurant.scanCount,
-        createdAt: resOwner.restaurant.createdAt,
+        id: restaurant._id,
+        name: restaurant.name,
+        slug: restaurant.slug,
+        plan: restaurant.plan,
+        qrUrl: restaurant.qrUrl,
+        logoUrl: restaurant.logoUrl,
+        heroTagline: restaurant.heroTagline,
+        heroHeading1: restaurant.heroHeading1,
+        heroHeading2: restaurant.heroHeading2,
+        heroDescription: restaurant.heroDescription,
+        scanCount: restaurant.scanCount,
+        photosUsed: restaurant.photosUsed ?? 0,
+        createdAt: restaurant.createdAt,
       },
-      subscription: resOwner.restaurant.subscription
+      subscription: subscription
         ? {
-            id: owner.restaurant.subscription.id,
-            status: owner.restaurant.subscription.status,
-            amount: owner.restaurant.subscription.amount,
-            activatedAt: owner.restaurant.subscription.activatedAt,
-            nextBillingAt: owner.restaurant.subscription.nextBillingAt,
-            haltedAt: owner.restaurant.subscription.haltedAt,
+            id: subscription._id,
+            status: subscription.status,
+            amount: subscription.amount,
+            activatedAt: subscription.activatedAt,
+            nextBillingAt: subscription.nextBillingAt,
+            haltedAt: subscription.haltedAt,
           }
         : null,
-      slots: owner.restaurant.slots,
+      slots: toIds(slots),
     });
   } catch (err) {
     console.error('[Dashboard Error]', err);
@@ -81,46 +86,81 @@ const resOwner = owner as any;
 router.patch('/profile', requireAuth, async (req, res) => {
   const userId = res.locals.userId as string;
 
-  const { ownerName, restaurantName } = req.body as { ownerName?: string; restaurantName?: string };
-  if (!ownerName?.trim() && !restaurantName?.trim()) {
-    res.status(400).json({ error: 'Nothing to update', code: 'NO_DATA' });
-    return;
-  }
+  const { ownerName, restaurantName, heroTagline, heroHeading1, heroHeading2, heroDescription } = req.body as { 
+    ownerName?: string; 
+    restaurantName?: string;
+    heroTagline?: string;
+    heroHeading1?: string;
+    heroHeading2?: string;
+    heroDescription?: string;
+  };
 
-  const owner = await prisma.restaurantOwner.findUnique({ where: { userId: userId } });
+  const owner = await RestaurantOwner.findOne({ userId }).lean();
   if (!owner) {
     res.status(404).json({ error: 'Not registered', code: 'NOT_REGISTERED' });
     return;
   }
 
+  const updates: Record<string, string> = {};
+  if (restaurantName?.trim()) updates.name = restaurantName.trim();
+  if (heroTagline !== undefined) updates.heroTagline = heroTagline;
+  if (heroHeading1 !== undefined) updates.heroHeading1 = heroHeading1;
+  if (heroHeading2 !== undefined) updates.heroHeading2 = heroHeading2;
+  if (heroDescription !== undefined) updates.heroDescription = heroDescription;
+
   await Promise.all([
     ownerName?.trim()
-      ? prisma.restaurantOwner.update({ where: { id: owner.id }, data: { ownerName: ownerName.trim() } })
+      ? RestaurantOwner.updateOne({ _id: owner._id }, { ownerName: ownerName.trim() })
       : Promise.resolve(),
-    restaurantName?.trim()
-      ? prisma.restaurant.update({ where: { id: owner.restaurantId }, data: { name: restaurantName.trim() } })
+    Object.keys(updates).length > 0
+      ? Restaurant.updateOne({ _id: owner.restaurantId }, updates)
       : Promise.resolve(),
   ]);
 
   res.json({ ok: true });
 });
 
-/** GET /api/v1/restaurant/slots */
-router.get('/slots', requireAuth, async (req, res) => {
+/** POST /api/v1/restaurant/logo */
+router.post('/logo', requireAuth, upload.single('logo'), async (req, res) => {
   const userId = res.locals.userId as string;
+  const file = req.file;
 
-  const owner = await prisma.restaurantOwner.findUnique({ where: { userId: userId } });
+  if (!file) {
+    res.status(400).json({ error: 'No logo uploaded', code: 'NO_FILE' });
+    return;
+  }
+
+  const owner = await RestaurantOwner.findOne({ userId }).lean();
   if (!owner) {
     res.status(404).json({ error: 'Not registered', code: 'NOT_REGISTERED' });
     return;
   }
 
-  const slots = await prisma.dishSlot.findMany({
-    where: { restaurantId: owner.restaurantId },
-    orderBy: { slotNumber: 'asc' },
-  });
+  const ext = file.originalname.split('.').pop() || 'png';
+  const dir = `photos/${owner.restaurantId}`;
+  
+  try {
+    const { url } = await saveFile(dir, `logo-${Date.now()}.${ext}`, file.buffer);
+    await Restaurant.updateOne({ _id: owner.restaurantId }, { logoUrl: url });
+    res.json({ logoUrl: url });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to upload logo', code: 'UPLOAD_FAILED' });
+  }
+});
 
-  res.json({ slots });
+/** GET /api/v1/restaurant/slots */
+router.get('/slots', requireAuth, async (req, res) => {
+  const userId = res.locals.userId as string;
+
+  const owner = await RestaurantOwner.findOne({ userId }).lean();
+  if (!owner) {
+    res.status(404).json({ error: 'Not registered', code: 'NOT_REGISTERED' });
+    return;
+  }
+
+  const slots = await DishSlot.find({ restaurantId: owner.restaurantId }).sort({ slotNumber: 1 }).lean();
+
+  res.json({ slots: toIds(slots) });
 });
 
 /** POST /api/v1/restaurant/slots/:slotNumber/photos
@@ -140,8 +180,8 @@ router.post(
     const userId = res.locals.userId as string;
 
     const slotNumber = parseInt(req.params.slotNumber, 10);
-    if (isNaN(slotNumber) || slotNumber < 1 || slotNumber > 10) {
-      res.status(400).json({ error: 'Slot number must be 1-10', code: 'INVALID_SLOT' });
+    if (isNaN(slotNumber) || slotNumber < 1 || slotNumber > 3) {
+      res.status(400).json({ error: 'Slot number must be 1-3', code: 'INVALID_SLOT' });
       return;
     }
 
@@ -154,26 +194,19 @@ router.post(
       return;
     }
 
-    const owner = await prisma.restaurantOwner.findUnique({
-      where: { userId: userId },
-      include: { restaurant: { include: { subscription: true } } },
-    });
-
+    const owner = await RestaurantOwner.findOne({ userId }).lean();
     if (!owner) {
       res.status(404).json({ error: 'Not registered', code: 'NOT_REGISTERED' });
       return;
     }
 
-    const resOwner = owner as any;
-    if (resOwner.restaurant.subscription?.status !== 'active') {
+    const subscription = await Subscription.findOne({ restaurantId: owner.restaurantId }).lean();
+    if (subscription?.status !== 'active') {
       res.status(403).json({ error: 'Active subscription required', code: 'NO_SUBSCRIPTION' });
       return;
     }
 
-    const slot = await prisma.dishSlot.findUnique({
-      where: { restaurantId_slotNumber: { restaurantId: owner.restaurantId, slotNumber } },
-    });
-
+    const slot = await DishSlot.findOne({ restaurantId: owner.restaurantId, slotNumber });
     if (!slot) {
       res.status(404).json({ error: 'Slot not found', code: 'SLOT_NOT_FOUND' });
       return;
@@ -201,14 +234,19 @@ router.post(
       photoKeys.push(key);
     }
 
-    const { dishName, description, price, isVeg } = req.body as { dishName?: string; description?: string; price?: string; isVeg?: string };
+    const { dishName, description, price, isVeg } = req.body as {
+      dishName?: string;
+      description?: string;
+      price?: string;
+      isVeg?: string;
+    };
 
     const parsedPrice = price && !isNaN(parseFloat(price)) ? parseFloat(price) : undefined;
     const parsedIsVeg = isVeg ? isVeg === 'true' : undefined;
 
-    const updated = await prisma.dishSlot.update({
-      where: { id: slot.id },
-      data: {
+    const updated = await DishSlot.findByIdAndUpdate(
+      slot._id,
+      {
         ...(photoKeys.length > 0 ? { photoKeys } : {}),
         ...(menuPhotoKey ? { menuPhotoKey, menuPhotoUrl } : {}),
         status: 'photos_uploaded',
@@ -217,13 +255,14 @@ router.post(
         ...(parsedPrice !== undefined ? { price: parsedPrice } : {}),
         ...(parsedIsVeg !== undefined ? { isVeg: parsedIsVeg } : {}),
       },
-    });
+      { new: true },
+    ).lean();
 
     res.json({
-      slotNumber: updated.slotNumber,
-      menuPhotoUrl: updated.menuPhotoUrl,
-      photoKeys: updated.photoKeys,
-      status: updated.status,
+      slotNumber: updated!.slotNumber,
+      menuPhotoUrl: updated!.menuPhotoUrl,
+      photoKeys: updated!.photoKeys,
+      status: updated!.status,
     });
   },
 );

@@ -3,6 +3,17 @@ import type {
   DishSlot,
   AdminStats,
   AdminRestaurant,
+  MenuScanResponse,
+  MenuScanStatusResponse,
+  MenuScanDraft,
+  MenuScanPublishResponse,
+  MenuEditResponse,
+  CreateCategoryInput,
+  UpdateCategoryInput,
+  CreateDishInput,
+  UpdateDishInput,
+  Category,
+  Dish,
 } from '@menuar/types'
 
 // Empty string = use Vite proxy in dev (avoids CORS on HTTPS).
@@ -132,7 +143,14 @@ export async function getDashboard(): Promise<DashboardResponse> {
 }
 
 export async function updateProfile(
-  data: { ownerName?: string; restaurantName?: string },
+  data: { 
+    ownerName?: string; 
+    restaurantName?: string;
+    heroTagline?: string;
+    heroHeading1?: string;
+    heroHeading2?: string;
+    heroDescription?: string;
+  },
 ): Promise<{ ok: boolean }> {
   return apiFetch('/api/v1/restaurant/profile', {
     method: 'PATCH',
@@ -154,6 +172,24 @@ export async function uploadSlotPhotos(
   if (meta?.isVeg !== undefined) formData.append('isVeg', meta.isVeg)
 
   const res = await fetch(`${API_URL}/api/v1/restaurant/slots/${slotNumber}/photos`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  })
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: 'Upload failed' }))
+    throw new Error(body.error)
+  }
+
+  return res.json()
+}
+
+export async function uploadRestaurantLogo(photo: File): Promise<{ logoUrl: string }> {
+  const formData = new FormData()
+  formData.append('logo', photo)
+
+  const res = await fetch(`${API_URL}/api/v1/restaurant/logo`, {
     method: 'POST',
     credentials: 'include',
     body: formData,
@@ -237,4 +273,124 @@ export async function getAdminEvents(token: string) {
 export async function recordQRScan(restaurantSlug: string): Promise<void> {
   // Fire-and-forget — don't await in calling code
   fetch(`${API_URL}/api/v1/menu/${restaurantSlug}/scan`, { method: 'POST' }).catch(() => {})
+}
+
+// ─── Landing page inquiries ───────────────────────────────────────────────────
+
+export interface ContactInquiryInput {
+  name: string
+  email: string
+  phone: string
+  subject: string
+  message: string
+}
+
+/** Saves a "Contact Us" submission so it shows up in the admin panel. */
+export async function submitContactInquiry(input: ContactInquiryInput): Promise<{ id: string }> {
+  return apiFetch('/api/v1/inquiry/contact', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+/** Adds an address to the newsletter list. Re-subscribing is a no-op, not an error. */
+export async function subscribeToNewsletter(email: string): Promise<{ alreadySubscribed: boolean }> {
+  return apiFetch('/api/v1/inquiry/newsletter', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+}
+
+// ─── Digital menu (Gemini OCR) ─────────────────────────────────────────────────
+
+export async function scanMenuPhotos(files: File[]): Promise<MenuScanResponse> {
+  const formData = new FormData()
+  files.forEach((f) => formData.append('photos', f))
+
+  const res = await fetch(`${API_URL}/api/v1/menu-scan`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  })
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: 'Menu scan failed' }))
+    throw new Error(body.error)
+  }
+
+  return res.json()
+}
+
+export async function getMenuScan(scanId: string): Promise<MenuScanStatusResponse> {
+  return apiFetch(`/api/v1/menu-scan/${scanId}`)
+}
+
+export async function publishMenuScan(
+  scanId: string,
+  draft: MenuScanDraft,
+): Promise<MenuScanPublishResponse> {
+  return apiFetch(`/api/v1/menu-scan/${scanId}/publish`, {
+    method: 'POST',
+    body: JSON.stringify(draft),
+  })
+}
+
+// ─── Digital menu editing (owner CRUD on the live text menu) ───────────────────
+
+export async function getMenuEdit(): Promise<MenuEditResponse> {
+  return apiFetch('/api/v1/menu-edit')
+}
+
+export async function createMenuCategory(input: CreateCategoryInput): Promise<Category> {
+  return apiFetch('/api/v1/menu-edit/categories', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function renameMenuCategory(categoryId: string, input: UpdateCategoryInput): Promise<{ ok: true }> {
+  return apiFetch(`/api/v1/menu-edit/categories/${categoryId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function deleteMenuCategory(categoryId: string): Promise<{ ok: true }> {
+  return apiFetch(`/api/v1/menu-edit/categories/${categoryId}`, { method: 'DELETE' })
+}
+
+export async function createMenuDish(categoryId: string, input: CreateDishInput): Promise<Dish> {
+  return apiFetch(`/api/v1/menu-edit/categories/${categoryId}/dishes`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function updateMenuDish(dishId: string, input: UpdateDishInput): Promise<{ ok: true }> {
+  return apiFetch(`/api/v1/menu-edit/dishes/${dishId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function deleteMenuDish(dishId: string): Promise<{ ok: true }> {
+  return apiFetch(`/api/v1/menu-edit/dishes/${dishId}`, { method: 'DELETE' })
+}
+
+export async function uploadDishPhoto(dishId: string, photo: File): Promise<{ thumbnailUrl: string }> {
+  const formData = new FormData()
+  formData.append('photo', photo)
+
+  const res = await fetch(`${API_URL}/api/v1/menu-edit/dishes/${dishId}/photo`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  })
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: 'Upload failed' }))
+    throw new Error(body.error)
+  }
+
+  return res.json()
 }

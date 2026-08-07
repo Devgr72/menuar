@@ -1,19 +1,14 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { requireAuth } from '../middleware/auth';
+import { Restaurant, RestaurantOwner, Subscription } from '../db/models/index.js';
+import { requireAuth } from '../middleware/auth.js';
 import {
   ensureMonthlyPlan,
   createRazorpaySubscription,
-  getClient,
+  syncPendingSubscriptionWithRazorpay,
   AMOUNT_PAISE,
-} from '../services/razorpay.service';
-import QRCode from 'qrcode';
-import { saveFile } from '../services/storage.service';
-
-const WEB_URL = process.env.WEB_URL || 'http://localhost:3000';
+} from '../services/razorpay.service.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 const IS_DEV = process.env.NODE_ENV !== 'production';
 
 function log(step: string, data?: unknown) {
@@ -31,11 +26,8 @@ router.post('/create', requireAuth, async (req, res) => {
 
   // Step 1: Look up restaurant owner
   log('Step 1: Looking up restaurantOwner for userId', userId);
-  const owner = await prisma.restaurantOwner.findUnique({
-    where: { userId: userId },
-    include: { restaurant: { include: { subscription: true } } },
-  }).catch((err) => {
-    logError('Prisma lookup failed', err);
+  const owner = await RestaurantOwner.findOne({ userId }).lean().catch((err) => {
+    logError('Owner lookup failed', err);
     return null;
   });
 
@@ -48,18 +40,25 @@ router.post('/create', requireAuth, async (req, res) => {
     return;
   }
 
-  const resOwner = owner as any;
+  const [restaurant, existingSubscription] = await Promise.all([
+    Restaurant.findById(owner.restaurantId).lean(),
+    Subscription.findOne({ restaurantId: owner.restaurantId }).lean(),
+  ]);
+
+  if (!restaurant) {
+    res.status(404).json({ error: 'Restaurant not found. Please complete onboarding first.', code: 'NOT_REGISTERED' });
+    return;
+  }
+
   log('Step 1 ✓ Owner found', {
-    ownerId: resOwner.id,
-    restaurantId: resOwner.restaurantId,
-    restaurantName: resOwner.restaurant.name,
-    existingSubscription: resOwner.restaurant.subscription
-      ? { status: resOwner.restaurant.subscription.status, id: resOwner.restaurant.subscription.id }
-      : null,
+    ownerId: owner._id,
+    restaurantId: owner.restaurantId,
+    restaurantName: restaurant.name,
+    existingSubscription: existingSubscription ? { status: existingSubscription.status, id: existingSubscription._id } : null,
   });
 
   // Step 2: Check for existing active subscription
-  if (resOwner.restaurant.subscription?.status === 'active') {
+  if (existingSubscription?.status === 'active') {
     log('Already subscribed — returning 409');
     res.status(409).json({ error: 'Already subscribed', code: 'ALREADY_SUBSCRIBED' });
     return;
@@ -88,30 +87,24 @@ router.post('/create', requireAuth, async (req, res) => {
     // Step 4: Create Razorpay subscription
     log('Step 3: Creating Razorpay subscription', {
       planId,
-      restaurantName: owner.restaurant.name,
+      restaurantName: restaurant.name,
       email: owner.email,
     });
 
     const { razorpaySubId, checkoutUrl, amount } = await createRazorpaySubscription(
       planId,
-      resOwner.restaurant.name,
-      resOwner.email ?? undefined,
+      restaurant.name,
+      owner.email ?? undefined,
     );
     log('Step 3 ✓ Razorpay subscription created', { razorpaySubId, checkoutUrl, amount });
 
     // Step 5: Upsert subscription record in DB
     log('Step 4: Upserting subscription in DB');
-    await prisma.subscription.upsert({
-      where: { restaurantId: owner.restaurantId },
-      update: { razorpaySubId, razorpayPlanId: planId, status: 'pending', amount },
-      create: {
-        restaurantId: owner.restaurantId,
-        razorpaySubId,
-        razorpayPlanId: planId,
-        status: 'pending',
-        amount,
-      },
-    });
+    await Subscription.findOneAndUpdate(
+      { restaurantId: owner.restaurantId },
+      { razorpaySubId, razorpayPlanId: planId, status: 'pending', amount },
+      { upsert: true, setDefaultsOnInsert: true },
+    );
     log('Step 4 ✓ DB subscription upserted');
 
     const responsePayload = {
@@ -135,84 +128,34 @@ router.post('/create', requireAuth, async (req, res) => {
 router.get('/status', requireAuth, async (req, res) => {
   const userId = res.locals.userId as string;
 
-  const owner = await prisma.restaurantOwner.findUnique({
-    where: { userId: userId },
-    include: { restaurant: { include: { subscription: true } } },
-  });
-
+  const owner = await RestaurantOwner.findOne({ userId }).lean();
   if (!owner) {
-    log('Status: owner not found — not registered', { userId });
     res.status(404).json({ error: 'Restaurant not found. Please complete onboarding first.', code: 'NOT_REGISTERED' });
     return;
   }
 
-  const resOwner = owner as any;
-  if (!resOwner.restaurant.subscription) {
+  const restaurant = await Restaurant.findById(owner.restaurantId).lean();
+  if (!restaurant) {
+    res.status(404).json({ error: 'Restaurant not found. Please complete onboarding first.', code: 'NOT_REGISTERED' });
+    return;
+  }
+
+  let sub = await Subscription.findOne({ restaurantId: owner.restaurantId }).lean();
+  if (!sub) {
     log('Status: owner exists but no subscription yet', { userId });
     res.json({ subscription: null });
     return;
   }
 
-  let sub = resOwner.restaurant.subscription;
-
   // Fallback sync for local development where Razorpay webhooks cannot reach localhost
   if (sub.status === 'pending') {
-    try {
-      const client = getClient();
-      const rzpSub = await client.subscriptions.fetch(sub.razorpaySubId);
-      
-      if (rzpSub.status === 'active' || rzpSub.status === 'authenticated') {
-        log('Razorpay says active/authenticated — fast-forwarding subscription state (webhook fallback)');
-        // @ts-ignore
-        const chargeAt = rzpSub.charge_at as number | undefined;
-        
-        await prisma.$transaction(async (tx) => {
-          sub = await tx.subscription.update({
-            where: { id: sub.id },
-            data: {
-              status: 'active',
-              activatedAt: new Date(),
-              nextBillingAt: chargeAt ? new Date(chargeAt * 1000) : undefined,
-              haltedAt: null,
-            },
-          });
-        });
-
-        // Generate QR code if missing
-        if (!resOwner.restaurant.qrUrl) {
-          const qrBuffer = await QRCode.toBuffer(`${WEB_URL}/ar/${resOwner.restaurant.slug}`, {
-            errorCorrectionLevel: 'H',
-            width: 400,
-            margin: 2,
-            color: { dark: '#000000', light: '#FFFFFF' },
-          });
-          const { url } = await saveFile(`qr/${owner.restaurant.id}`, 'main.png', qrBuffer);
-          await prisma.restaurant.update({
-            where: { id: owner.restaurant.id },
-            data: { qrKey: `qr/${owner.restaurant.id}/main.png`, qrUrl: url },
-          });
-        }
-
-        // Create default menu if lacking
-        const existingMenu = await prisma.menu.findFirst({ where: { restaurantId: owner.restaurant.id } });
-        if (!existingMenu) {
-          const menu = await prisma.menu.create({
-            data: { restaurantId: owner.restaurant.id, name: 'Menu', isActive: true },
-          });
-          await prisma.category.create({
-            data: { menuId: menu.id, name: 'Dishes', sortOrder: 0 },
-          });
-        }
-      }
-    } catch (err) {
-      logError('Failed to sync pending subscription with Razorpay:', err);
-    }
+    sub = await syncPendingSubscriptionWithRazorpay(sub, restaurant);
   }
 
-  log('Status: returning subscription', { status: sub.status, id: sub.id });
+  log('Status: returning subscription', { status: sub.status, id: sub._id });
   res.json({
     subscription: {
-      id: sub.id,
+      id: sub._id,
       status: sub.status,
       activatedAt: sub.activatedAt,
       nextBillingAt: sub.nextBillingAt,

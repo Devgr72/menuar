@@ -1,78 +1,91 @@
-import { PrismaClient } from '@prisma/client';
+import { Restaurant, Menu, Category, Dish, DishSlot } from '../db/models/index.js';
 import type { ModelStatusResponse } from '@menuar/types';
-
-const prisma = new PrismaClient();
-
-/**
- * In local-disk mode, stored URLs look like http://host:3001/uploads/key.
- * Strip the origin so the frontend receives /uploads/key, which Vite proxies
- * back to the API — avoiding mixed-content blocks on HTTPS dev pages.
- * In R2 mode the URL is already a public CDN URL; leave it as-is.
- */
-function toClientUrl(url: string | null | undefined): string | undefined {
-  if (!url) return undefined;
-  if (process.env.USE_R2 === 'true') return url;
-  try {
-    return new URL(url).pathname; // e.g. /uploads/models/.../dish.glb
-  } catch {
-    return url;
-  }
-}
 
 /**
  * Returns menu for the AR customer view.
  * Merges traditional Category/Dish records with DishSlot GLBs (glb_ready slots).
  */
 export async function getMenuBySlug(restaurantSlug: string) {
-  const restaurant = await prisma.restaurant.findUnique({
-    where: { slug: restaurantSlug },
-  });
-
+  const restaurant = await Restaurant.findOne({ slug: restaurantSlug }).lean();
   if (!restaurant) return null;
 
+  const restaurantView = {
+    id: restaurant._id,
+    name: restaurant.name,
+    slug: restaurant.slug,
+    plan: restaurant.plan,
+    qrUrl: restaurant.qrUrl,
+    logoUrl: restaurant.logoUrl,
+    heroTagline: restaurant.heroTagline,
+    heroHeading1: restaurant.heroHeading1,
+    heroHeading2: restaurant.heroHeading2,
+    heroDescription: restaurant.heroDescription,
+    scanCount: restaurant.scanCount,
+    createdAt: restaurant.createdAt,
+  };
+
   // Try to load traditional menu (Category → Dish structure)
-  const menu = await prisma.menu.findFirst({
-    where: { restaurantId: restaurant.id, isActive: true },
-    include: {
-      categories: {
-        orderBy: { sortOrder: 'asc' },
-        include: {
-          dishes: {
-            where: { isAvailable: true },
-            orderBy: { name: 'asc' },
-          },
-        },
-      },
-    },
-  });
+  const menuDoc = await Menu.findOne({ restaurantId: restaurant._id, isActive: true }).lean();
+
+  let categories: Array<{ id: string; menuId: string; name: string; sortOrder: number; dishes: unknown[] }> = [];
+  if (menuDoc) {
+    const categoryDocs = await Category.find({ menuId: menuDoc._id }).sort({ sortOrder: 1 }).lean();
+    const categoryIds = categoryDocs.map((c) => c._id);
+    const dishDocs = await Dish.find({ categoryId: { $in: categoryIds }, isAvailable: true })
+      .sort({ name: 1 })
+      .lean();
+
+    const dishesByCategory: Record<string, typeof dishDocs> = {};
+    for (const d of dishDocs) (dishesByCategory[d.categoryId] ??= []).push(d);
+
+    categories = categoryDocs.map((c) => ({
+      id: c._id,
+      menuId: c.menuId,
+      name: c.name,
+      sortOrder: c.sortOrder,
+      dishes: (dishesByCategory[c._id] || []).map((d) => ({
+        id: d._id,
+        categoryId: d.categoryId,
+        name: d.name,
+        description: d.description,
+        price: d.price,
+        isVeg: d.isVeg,
+        spiceLevel: d.spiceLevel,
+        allergens: d.allergens,
+        ingredients: d.ingredients,
+        isAvailable: d.isAvailable,
+        modelUrl: d.modelUrl,
+        thumbnailUrl: d.thumbnailUrl,
+        modelStatus: d.modelStatus,
+        modelSource: d.modelSource,
+        aiDescription: d.aiDescription,
+        translations: d.translations,
+        createdAt: d.createdAt,
+      })),
+    }));
+  }
 
   // Load ready dish slots — these are the primary dish source for SaaS restaurants
-  const readySlots = await prisma.dishSlot.findMany({
-    where: { restaurantId: restaurant.id, status: 'glb_ready' },
-    orderBy: { slotNumber: 'asc' },
-  });
+  const readySlots = await DishSlot.find({ restaurantId: restaurant._id, status: 'glb_ready' })
+    .sort({ slotNumber: 1 })
+    .lean();
 
-  // If no traditional menu but has ready slots, build a synthetic menu shape
-  if (!menu && readySlots.length === 0) return null;
+  if (!menuDoc && readySlots.length === 0) return null;
 
-  const syntheticMenu = menu ?? {
-    id: `slots-${restaurant.id}`,
-    restaurantId: restaurant.id,
-    name: 'Menu',
-    isActive: true,
-    categories: [],
-  };
+  const menuId = menuDoc ? menuDoc._id : `slots-${restaurant._id}`;
+  const menuName = menuDoc ? menuDoc.name : 'Menu';
+  const menuIsActive = menuDoc ? menuDoc.isActive : true;
 
   // Build a "Dishes" category from ready slots if any
   if (readySlots.length > 0) {
     const slotsCategory = {
-      id: `slots-cat-${restaurant.id}`,
-      menuId: syntheticMenu.id,
+      id: `slots-cat-${restaurant._id}`,
+      menuId,
       name: 'Dishes',
       sortOrder: -1, // shows first
       dishes: readySlots.map((slot) => ({
-        id: `slot-${slot.id}`,
-        categoryId: `slots-cat-${restaurant.id}`,
+        id: `slot-${slot._id}`,
+        categoryId: `slots-cat-${restaurant._id}`,
         name: slot.dishName ?? `Dish ${slot.slotNumber}`,
         description: slot.description ?? '',
         price: slot.price ?? 0,
@@ -80,8 +93,8 @@ export async function getMenuBySlug(restaurantSlug: string) {
         spiceLevel: 0,
         allergens: [] as string[],
         isAvailable: true,
-        modelUrl: toClientUrl(slot.glbUrl),
-        thumbnailUrl: toClientUrl(slot.menuPhotoUrl),
+        modelUrl: slot.glbUrl,
+        thumbnailUrl: slot.menuPhotoUrl,
         modelStatus: 'ready' as const,
         modelSource: 'tripo' as const,
         aiDescription: undefined,
@@ -90,42 +103,59 @@ export async function getMenuBySlug(restaurantSlug: string) {
       })),
     };
 
-    // Prepend slots category to whatever categories exist
-    const existingCategories = 'categories' in syntheticMenu ? syntheticMenu.categories : [];
     return {
-      restaurant,
+      restaurant: restaurantView,
       menu: {
-        ...syntheticMenu,
-        categories: [slotsCategory, ...existingCategories],
+        id: menuId,
+        restaurantId: restaurant._id,
+        name: menuName,
+        isActive: menuIsActive,
+        categories: [slotsCategory, ...categories],
       },
     };
   }
 
-  return { restaurant, menu: syntheticMenu };
+  return {
+    restaurant: restaurantView,
+    menu: { id: menuId, restaurantId: restaurant._id, name: menuName, isActive: menuIsActive, categories },
+  };
 }
 
 /** Increments restaurant scan count. Call on each QR scan event (already rate-limited). */
 export async function incrementScanCount(restaurantSlug: string): Promise<void> {
-  await prisma.restaurant.updateMany({
-    where: { slug: restaurantSlug },
-    data: { scanCount: { increment: 1 } },
-  });
+  await Restaurant.updateMany({ slug: restaurantSlug }, { $inc: { scanCount: 1 } });
 }
 
 export async function getDishById(dishId: string) {
-  return prisma.dish.findUnique({ where: { id: dishId } });
-}
-
-export async function getDishModelStatus(dishId: string): Promise<ModelStatusResponse | null> {
-  const dish = await prisma.dish.findUnique({
-    where: { id: dishId },
-    select: { id: true, modelStatus: true, modelSource: true, modelUrl: true },
-  });
-
+  const dish = await Dish.findById(dishId).lean();
   if (!dish) return null;
 
   return {
-    dishId: dish.id,
+    id: dish._id,
+    categoryId: dish.categoryId,
+    name: dish.name,
+    description: dish.description,
+    price: dish.price,
+    isVeg: dish.isVeg,
+    spiceLevel: dish.spiceLevel,
+    allergens: dish.allergens,
+    ingredients: dish.ingredients,
+    isAvailable: dish.isAvailable,
+    modelUrl: dish.modelUrl,
+    thumbnailUrl: dish.thumbnailUrl,
+    modelStatus: dish.modelStatus,
+    modelSource: dish.modelSource,
+    aiDescription: dish.aiDescription,
+    translations: dish.translations,
+  };
+}
+
+export async function getDishModelStatus(dishId: string): Promise<ModelStatusResponse | null> {
+  const dish = await Dish.findById(dishId).select('modelStatus modelSource modelUrl').lean();
+  if (!dish) return null;
+
+  return {
+    dishId: dish._id,
     modelStatus: dish.modelStatus as ModelStatusResponse['modelStatus'],
     modelSource: dish.modelSource as ModelStatusResponse['modelSource'],
     modelUrl: dish.modelUrl ?? undefined,

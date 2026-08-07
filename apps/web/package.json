@@ -12,9 +12,12 @@
   "dependencies": {
     "@menuar/types": "*",
     "better-auth": "^1.6.5",
+    "framer-motion": "^12.43.0",
+    "lucide-react": "^1.28.0",
     "mind-ar": "^1.2.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hook-form": "^7.83.0",
     "react-router-dom": "^6.22.3",
     "three": "0.149.0",
     "zustand": "^4.5.2"

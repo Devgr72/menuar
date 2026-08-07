@@ -13,6 +13,12 @@ html, body, #root {
   scroll-behavior: smooth;
 }
 
+/* Safety net against sideways scroll on narrow screens. `clip` rather than
+   `hidden` — hidden would make body a scroll container and break the sticky navbar. */
+body {
+  overflow-x: clip;
+}
+
 h1, h2, h3, h4, .font-poppins {
   font-family: 'Poppins', sans-serif;
 }
@@ -20,5 +26,25 @@ h1, h2, h3, h4, .font-poppins {
 /* Hide scrollbar visually while keeping scroll functionality */
 .overflow-x-auto::-webkit-scrollbar {
   display: none;
+}
+
+@layer components {
+  /* Marketing site layout primitives — 1280px container, 120/80/60 section rhythm */
+  .dd-container {
+    @apply mx-auto w-full max-w-container px-5 sm:px-8 lg:px-10;
+  }
+  /* Panels carry their own inner padding, so section padding stays modest —
+     otherwise the two stack into a huge dead gap between sections. */
+  .dd-section {
+    @apply py-[36px] md:py-[44px] lg:py-[56px];
+  }
+  /* Inner padding for the peach panel sections. */
+  .dd-panel {
+    @apply rounded-card px-5 py-[36px] sm:px-10 md:py-[44px] lg:px-16 lg:py-[56px];
+  }
+  /* Sticky navbar is 80px — keep anchor targets clear of it */
+  .dd-anchor {
+    @apply scroll-mt-[96px];
+  }
 }
 

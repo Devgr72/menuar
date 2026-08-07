@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MenuAR Admin",
-  description: "Admin panel for MenuAR",
+  title: "DishDekho Admin",
+  description: "Admin panel for DishDekho",
 };
 
 export default function RootLayout({

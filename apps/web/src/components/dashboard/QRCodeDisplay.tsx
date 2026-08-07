@@ -4,10 +4,15 @@ interface Props {
   qrUrl: string
   restaurantName: string
   slug: string
+  hasDigitalMenu?: boolean
 }
 
-export default function QRCodeDisplay({ qrUrl, restaurantName, slug }: Props) {
+export default function QRCodeDisplay({ qrUrl, restaurantName, slug, hasDigitalMenu }: Props) {
   const [downloading, setDownloading] = useState(false)
+
+  function handlePreview() {
+    window.open(`/ar/${slug}?preview=1`, '_blank', 'noopener')
+  }
 
   async function handleDownload() {
     setDownloading(true)
@@ -31,7 +36,7 @@ export default function QRCodeDisplay({ qrUrl, restaurantName, slug }: Props) {
   }
 
   return (
-    <div className="bg-[#F8FAFC] rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-8 border border-[#F1F5F9] transition-all hover:bg-white hover:shadow-lg hover:shadow-[#1e293b05]">
+    <div className="bg-[#F8FAFC] rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-8 border border-[#F1F5F9] transition-all hover:bg-white hover:shadow-lg hover:shadow-[#0F274705]">
       {/* QR Image */}
       <div className="flex-none bg-white rounded-3xl p-5 shadow-sm border border-[#F1F5F9] transform transition-transform group-hover:scale-105">
         <img src={qrUrl} alt="Restaurant QR code" className="w-32 h-32 object-contain" />
@@ -40,9 +45,9 @@ export default function QRCodeDisplay({ qrUrl, restaurantName, slug }: Props) {
       {/* Info + download */}
       <div className="flex-1 text-center sm:text-left space-y-4">
         <div>
-          <h3 className="font-fraunces font-bold text-xl text-[#1E293B]">Table Engine QR</h3>
+          <h3 className="font-fraunces font-bold text-xl text-[#0F2747]">Table Engine QR</h3>
           <p className="font-outfit text-sm text-[#64748B] font-medium mt-1">
-            Linked to: <span className="text-[#2C4A2C] font-semibold">{restaurantName}</span>
+            Linked to: <span className="text-[#FF6B00] font-semibold">{restaurantName}</span>
           </p>
         </div>
         
@@ -50,29 +55,44 @@ export default function QRCodeDisplay({ qrUrl, restaurantName, slug }: Props) {
           High-fidelity vector QR. Customers scan this to initiate the AR journey. Optimized for 300dpi print quality.
         </p>
 
-        <button
-          onClick={handleDownload}
-          disabled={downloading}
-          className={`inline-flex items-center gap-3 px-6 py-3 rounded-2xl font-outfit font-bold text-sm transition-all shadow-lg active:scale-95 disabled:opacity-70 ${
-            downloading 
-              ? 'bg-[#1E293B] text-white' 
-              : 'bg-[#2C4A2C] text-white hover:bg-[#1E293B] shadow-[#2c4a2c20]'
-          }`}
-        >
-          {downloading ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white animate-spin rounded-full" />
-              Preparing PNG...
-            </>
-          ) : (
-            <>
+        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+          <button
+            onClick={handleDownload}
+            disabled={downloading}
+            className={`inline-flex items-center gap-3 px-6 py-3 rounded-2xl font-outfit font-bold text-sm transition-all shadow-lg active:scale-95 disabled:opacity-70 ${
+              downloading
+                ? 'bg-[#0F2747] text-white'
+                : 'bg-[#FF6B00] text-white hover:bg-[#0F2747] shadow-[#FF6B0020]'
+            }`}
+          >
+            {downloading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white animate-spin rounded-full" />
+                Preparing PNG...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download QR Code
+              </>
+            )}
+          </button>
+
+          {hasDigitalMenu && (
+            <button
+              onClick={handlePreview}
+              className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl font-outfit font-bold text-sm transition-all shadow-lg active:scale-95 bg-white text-[#0F2747] border border-[#E2E8F0] hover:border-[#0F2747]"
+            >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
-              Download QR Code
-            </>
+              Preview Menu
+            </button>
           )}
-        </button>
+        </div>
       </div>
     </div>
   )

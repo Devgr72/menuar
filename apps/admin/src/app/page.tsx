@@ -1,12 +1,14 @@
 "use client"
 
 import { useState, useEffect, useCallback, Suspense } from 'react'
+import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAdminStats, useAdminRestaurants } from '../hooks/useAdmin'
 import AdminSlotDetail from '../components/AdminSlotDetail'
+import AdminInquiries from '../components/AdminInquiries'
 import type { AdminRestaurant } from '@menuar/types'
 
-type Tab = 'dashboard' | 'restaurants' | 'users' | 'transactions'
+type Tab = 'dashboard' | 'restaurants' | 'users' | 'transactions' | 'inquiries'
 type Filter = 'all' | 'paid' | 'lead'
 
 interface DetailView {
@@ -157,7 +159,14 @@ function AdminPageInner() {
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
           <div className="bg-orange-600 px-6 py-8 text-center">
-            <h1 className="text-2xl font-bold text-white mb-1">MenuAR Admin</h1>
+            <Image
+              src="/dishdekho-icon.png"
+              alt="DishDekho"
+              width={56}
+              height={56}
+              className="mx-auto mb-4 bg-white rounded-2xl p-1.5 shadow-sm"
+            />
+            <h1 className="text-2xl font-bold text-white mb-1">DishDekho Admin</h1>
             <p className="text-orange-100 text-sm">Sign in with your credentials</p>
           </div>
           <form className="p-6 space-y-4" onSubmit={handleLogin}>
@@ -204,7 +213,14 @@ function AdminPageInner() {
     return (
       <div className="min-h-screen bg-gray-50 text-gray-900">
         <header className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm flex items-center justify-between">
-          <h1 className="text-lg font-bold text-orange-600">MenuAR Admin</h1>
+          <div className="flex items-center gap-2.5">
+            <Image src="/dishdekho-icon.png" alt="DishDekho" width={32} height={32} className="object-contain" />
+            <h1 className="text-lg font-bold">
+              <span className="text-orange-500">Dish</span>
+              <span className="text-slate-900">Dekho</span>
+              <span className="text-gray-400 font-semibold ml-1.5">Admin</span>
+            </h1>
+          </div>
           <button
             onClick={signOut}
             className="text-gray-600 hover:text-red-600 text-sm font-medium border border-gray-200 px-4 py-1.5 rounded-lg hover:border-red-200 hover:bg-red-50 transition-colors"
@@ -231,12 +247,20 @@ function AdminPageInner() {
     { id: 'restaurants', label: 'Restaurants' },
     { id: 'users', label: 'Users' },
     { id: 'transactions', label: 'Transactions' },
+    { id: 'inquiries', label: 'Inquiries' },
   ]
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <header className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm flex items-center justify-between">
-        <h1 className="text-lg font-bold text-orange-600">MenuAR Admin</h1>
+        <div className="flex items-center gap-2.5">
+          <Image src="/dishdekho-icon.png" alt="DishDekho" width={32} height={32} className="object-contain" />
+          <h1 className="text-lg font-bold">
+            <span className="text-orange-500">Dish</span>
+            <span className="text-slate-900">Dekho</span>
+            <span className="text-gray-400 font-semibold ml-1.5">Admin</span>
+          </h1>
+        </div>
         <button
           onClick={signOut}
           className="text-gray-600 hover:text-red-600 text-sm font-medium border border-gray-200 px-4 py-1.5 rounded-lg hover:border-red-200 hover:bg-red-50 transition-colors"
@@ -275,16 +299,19 @@ function AdminPageInner() {
                 { label: 'Paid', value: stats?.totalPaid, color: 'text-green-600', bg: 'hover:border-green-400', filter: 'paid' as Filter, icon: '✅' },
                 { label: 'Leads', value: stats?.leads, color: 'text-yellow-600', bg: 'hover:border-yellow-400', filter: 'lead' as Filter, icon: '🎯' },
                 { label: 'QR Scans', value: stats?.totalQrScans, color: 'text-blue-600', bg: 'hover:border-blue-400', filter: null, icon: '📱' },
+                { label: 'New Inquiries', value: stats?.newInquiries, color: 'text-orange-600', bg: 'hover:border-orange-400', filter: null, goTo: 'inquiries' as Tab, icon: '📥' },
               ].map((card) => (
                 <button
                   key={card.label}
                   onClick={() => {
-                    if (card.filter) {
+                    if (card.goTo) {
+                      changeTab(card.goTo)
+                    } else if (card.filter) {
                       setFilter(card.filter)
                       changeTab('restaurants')
                     }
                   }}
-                  className={`bg-white border border-gray-200 shadow-sm rounded-2xl p-5 text-left w-full transition-all ${card.filter ? `cursor-pointer ${card.bg} hover:shadow-md hover:-translate-y-0.5` : 'cursor-default'}`}
+                  className={`bg-white border border-gray-200 shadow-sm rounded-2xl p-5 text-left w-full transition-all ${card.filter || card.goTo ? `cursor-pointer ${card.bg} hover:shadow-md hover:-translate-y-0.5` : 'cursor-default'}`}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-gray-500 font-medium text-xs uppercase tracking-wider">{card.label}</p>
@@ -293,7 +320,7 @@ function AdminPageInner() {
                   <p className={`text-3xl font-black ${card.color}`}>
                     {statsLoading ? '—' : (card.value ?? 0)}
                   </p>
-                  {card.filter && <p className="text-gray-400 text-[10px] mt-1.5 font-medium">Click to view →</p>}
+                  {(card.filter || card.goTo) && <p className="text-gray-400 text-[10px] mt-1.5 font-medium">Click to view →</p>}
                 </button>
               ))}
             </div>
@@ -311,6 +338,9 @@ function AdminPageInner() {
             </div>
           </div>
         )}
+
+        {/* ── INQUIRIES TAB ── */}
+        {tab === 'inquiries' && token && <AdminInquiries token={token} />}
 
         {/* ── RESTAURANTS TAB ── */}
         {tab === 'restaurants' && (

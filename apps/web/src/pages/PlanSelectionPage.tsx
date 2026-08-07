@@ -5,7 +5,7 @@ import { createSubscription, getSubscriptionStatus } from '../api/client'
 
 const IS_DEV = import.meta.env.DEV
 function log(step: string, data?: unknown) {
-  if (IS_DEV) console.log(`%c[PlanPage] ${step}`, 'color:#2563eb;font-weight:bold', data ?? '')
+  if (IS_DEV) console.log(`%c[PlanPage] ${step}`, 'color:#FF6B00;font-weight:bold', data ?? '')
 }
 function logError(step: string, err: unknown) {
   if (IS_DEV) console.error(`%c[PlanPage] ✗ ${step}`, 'color:#ef4444;font-weight:bold', err)
@@ -38,7 +38,7 @@ interface RazorpayInstance {
 }
 
 const FEATURES = [
-  { icon: '🥘', text: '10 dishes with live 3D AR models' },
+  { icon: '🥘', text: '3 dishes with live 3D AR models' },
   { icon: '📱', text: 'QR code per table — no app needed' },
   { icon: '📊', text: 'Real-time scan analytics dashboard' },
   { icon: '🖼️', text: 'Photo upload for all dishes' },
@@ -77,7 +77,7 @@ export default function PlanSelectionPage() {
         log('Subscription status result', subscription)
         if (subscription?.status === 'active') {
           log('Already active → redirecting to /dashboard')
-          navigate('/dashboard', { replace: true })
+          window.location.href = '/dashboard'
           return
         }
         setPageState('ready')
@@ -126,12 +126,12 @@ export default function PlanSelectionPage() {
         subscription_id: razorpaySubId,
         name: 'DishDekho',
         description: 'Monthly AR Menu Subscription',
-        image: '/dishdekho.jpeg',
+        image: `${window.location.origin}/dishdekho-icon.png`,
         prefill: {
           name: session?.user?.name ?? undefined,
           email: session?.user?.email ?? undefined,
         },
-        theme: { color: '#2563eb' },
+        theme: { color: '#FF6B00' },
         modal: {
           ondismiss: () => {
             log('Razorpay modal dismissed by user')
@@ -179,9 +179,9 @@ export default function PlanSelectionPage() {
   if (pageState === 'checking') {
     return (
       <div className="min-h-screen flex items-center justify-center font-poppins"
-        style={{ background: 'linear-gradient(135deg, #f0f7ff 0%, #fafafa 100%)' }}>
+        style={{ background: 'linear-gradient(135deg, #FFF8F3 0%, #FFFFFF 100%)' }}>
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-[#2563eb] border-t-transparent rounded-full animate-spin"
+          <div className="w-8 h-8 border-3 border-[#FF6B00] border-t-transparent rounded-full animate-spin"
             style={{ borderWidth: 3 }} />
           <p className="text-slate-500 text-sm font-medium">Checking your account…</p>
         </div>
@@ -192,21 +192,21 @@ export default function PlanSelectionPage() {
   return (
     <div
       className="min-h-screen font-poppins flex flex-col"
-      style={{ background: 'linear-gradient(135deg, #f0f7ff 0%, #f8fafc 60%, #fff7ed 100%)' }}
+      style={{ background: 'linear-gradient(135deg, #FFF8F3 0%, #FFFFFF 55%, #FFF1E6 100%)' }}
     >
       {/* Top nav bar */}
       <header className="flex items-center justify-between px-6 sm:px-10 py-5 bg-white/70 backdrop-blur-md border-b border-slate-200/60">
         <div className="flex items-center gap-3">
           <img
-            src="/dishdekho.jpeg"
+            src="/dishdekho-icon.png"
             alt="DishDekho"
-            className="h-9 w-9 rounded-xl object-cover border border-slate-100 shadow-sm"
+            className="h-9 w-9 rounded-xl object-contain bg-white p-0.5 border border-slate-100 shadow-sm"
             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
           />
           <div>
             <p className="text-[1.2rem] font-extrabold leading-none tracking-tight">
-              <span className="text-amber-500">Dish</span>
-              <span className="text-slate-900">Dekho</span>
+              <span className="text-[#FF6B00]">Dish</span>
+              <span className="text-[#0F2747]">Dekho</span>
             </p>
             <p className="text-slate-400 text-[9px] font-bold tracking-widest uppercase mt-[2px]">
               AR Restaurant Menus
@@ -223,13 +223,13 @@ export default function PlanSelectionPage() {
 
         {/* Hero heading */}
         <div className="text-center mb-10 max-w-xl">
-          <span className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-full px-4 py-1.5 text-xs font-bold tracking-widest uppercase mb-4">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+          <span className="inline-flex items-center gap-2 bg-[#FFF1E6] text-[#FF6B00] border border-[#FFE6D2] rounded-full px-4 py-1.5 text-xs font-bold tracking-widest uppercase mb-4">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B00] animate-pulse" />
             Launch Offer — 50% Off
           </span>
-          <h1 className="text-[2.2rem] sm:text-[2.6rem] font-extrabold text-slate-900 leading-[1.1] tracking-tight">
-            Bring your menu <span className="text-[#2563eb]">to life</span><br />
-            with <span className="text-amber-500">AR technology</span>
+          <h1 className="text-[2.2rem] sm:text-[2.6rem] font-extrabold text-[#0F2747] leading-[1.1] tracking-tight">
+            Bring your menu <span className="text-[#FF6B00]">to life</span><br />
+            with <span className="text-[#FF6B00]">AR technology</span>
           </h1>
           <p className="text-slate-500 text-base mt-4 leading-relaxed">
             One simple plan. Everything you need to wow your guests and boost table engagement.
@@ -241,11 +241,11 @@ export default function PlanSelectionPage() {
           <div className="bg-white rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/60 overflow-hidden relative">
 
             {/* Top accent bar */}
-            <div className="h-1.5 w-full bg-gradient-to-r from-[#2563eb] via-[#60a5fa] to-amber-400" />
+            <div className="h-1.5 w-full bg-gradient-to-r from-[#FF6B00] via-[#FF8A3D] to-[#FF8A3D]" />
 
             {/* Badge */}
             <div className="absolute top-6 right-6">
-              <span className="bg-amber-400 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-sm">
+              <span className="bg-[#FF8A3D] text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-sm">
                 Best Value
               </span>
             </div>
@@ -259,11 +259,11 @@ export default function PlanSelectionPage() {
                 </p>
                 <div className="flex items-end gap-2">
                   <span className="text-slate-300 line-through text-xl font-semibold">₹1,000</span>
-                  <span className="text-[3rem] font-black text-slate-900 leading-none">₹500</span>
+                  <span className="text-[3rem] font-black text-[#0F2747] leading-none">₹500</span>
                   <span className="text-slate-400 text-sm font-medium pb-1">/month</span>
                 </div>
-                <p className="text-[#2563eb] text-sm font-semibold mt-1.5 flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                <p className="text-[#FF6B00] text-sm font-semibold mt-1.5 flex items-center gap-1.5">
+                  <svg className="w-4 h-4 text-[#FF6B00]" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
                   50% off — limited time launch price
@@ -277,11 +277,11 @@ export default function PlanSelectionPage() {
               <ul className="space-y-3 mb-7">
                 {FEATURES.map((f) => (
                   <li key={f.text} className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-base shrink-0">
+                    <div className="w-8 h-8 rounded-lg bg-[#FFF1E6] flex items-center justify-center text-base shrink-0">
                       {f.icon}
                     </div>
                     <span className="text-slate-700 text-sm font-medium">{f.text}</span>
-                    <svg className="w-4 h-4 text-[#2563eb] ml-auto shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-4 h-4 text-[#FF6B00] ml-auto shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                     </svg>
                   </li>
@@ -304,8 +304,8 @@ export default function PlanSelectionPage() {
                 style={{
                   background: subscribing
                     ? '#93c5fd'
-                    : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                  boxShadow: subscribing ? 'none' : '0 8px 24px rgba(37,99,235,0.35)',
+                    : 'linear-gradient(135deg, #FF6B00 0%, #E85F00 100%)',
+                  boxShadow: subscribing ? 'none' : '0 8px 24px rgba(255,107,0,0.35)',
                 }}
               >
                 {subscribing ? (
@@ -343,7 +343,7 @@ export default function PlanSelectionPage() {
             <span className="text-2xl shrink-0">⭐</span>
             <div>
               <p className="text-slate-700 text-sm font-medium leading-snug">
-                "Tables that used DishDekho saw <span className="text-[#2563eb] font-bold">40% fewer ordering mistakes</span> and guests spent more time exploring."
+                "Tables that used DishDekho saw <span className="text-[#FF6B00] font-bold">40% fewer ordering mistakes</span> and guests spent more time exploring."
               </p>
               <p className="text-slate-400 text-xs mt-1.5 font-medium">— Priya R., Restaurant Owner · Mumbai</p>
             </div>

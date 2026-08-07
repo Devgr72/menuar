@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { PrismaClient, Prisma } from '@prisma/client';
-import { requireAuth } from '../middleware/auth';
+import mongoose from 'mongoose';
+import { Restaurant, RestaurantOwner, DishSlot, Subscription } from '../db/models/index.js';
+import { requireAuth } from '../middleware/auth.js';
+import { syncPendingSubscriptionWithRazorpay } from '../services/razorpay.service.js';
 
 const IS_DEV = process.env.NODE_ENV !== 'production';
 function log(step: string, data?: unknown) {
@@ -12,7 +14,6 @@ function logError(step: string, err: unknown) {
 }
 
 const router = Router();
-const prisma = new PrismaClient();
 
 const RegisterSchema = z.object({
   restaurantName: z.string().min(2).max(100).trim(),
@@ -30,13 +31,13 @@ async function generateSlug(name: string): Promise<string> {
 
   let slug = base;
   let suffix = 2;
-  while (await prisma.restaurant.findUnique({ where: { slug } })) {
+  while (await Restaurant.exists({ slug })) {
     slug = `${base}-${suffix++}`;
   }
   return slug;
 }
 
-/** POST /api/v1/auth/register — create restaurant + owner + 10 dish slots */
+/** POST /api/v1/auth/register — create restaurant + owner + 3 dish slots */
 router.post('/register', requireAuth, async (req, res) => {
   const userId = res.locals.userId as string;
   if (!userId) {
@@ -53,44 +54,46 @@ router.post('/register', requireAuth, async (req, res) => {
   const { restaurantName, ownerName, email } = parsed.data;
 
   // Check if owner already registered
-  const existing = await prisma.restaurantOwner.findUnique({ where: { userId: userId } });
+  const existing = await RestaurantOwner.findOne({ userId });
   if (existing) {
     res.status(409).json({ error: 'Restaurant already registered for this account', code: 'ALREADY_REGISTERED' });
     return;
   }
 
+  const slug = await generateSlug(restaurantName);
+  const session = await mongoose.startSession();
+
   try {
-    const slug = await generateSlug(restaurantName);
+    let restaurantId = '';
+    let ownerId = '';
 
-    const result = await prisma.$transaction(async (tx) => {
-      const restaurant = await tx.restaurant.create({
-        data: { name: restaurantName, slug, plan: 'free' },
-      });
+    await session.withTransaction(async () => {
+      const [restaurant] = await Restaurant.create([{ name: restaurantName, slug, plan: 'free' }], { session });
 
-      const owner = await tx.restaurantOwner.create({
-        data: { userId: userId, ownerName, email, restaurantId: restaurant.id },
-      });
+      const [owner] = await RestaurantOwner.create(
+        [{ userId, ownerName, email, restaurantId: restaurant._id }],
+        { session },
+      );
 
-      // Create 10 dish slots
-      await tx.dishSlot.createMany({
-        data: Array.from({ length: 10 }, (_, i) => ({
-          restaurantId: restaurant.id,
+      await DishSlot.insertMany(
+        Array.from({ length: 3 }, (_, i) => ({
+          restaurantId: restaurant._id,
           slotNumber: i + 1,
           status: 'empty',
         })),
-      });
+        { session },
+      );
 
-      return { restaurant, owner };
+      restaurantId = restaurant._id;
+      ownerId = owner._id;
     });
 
-    res.status(201).json({
-      restaurantId: result.restaurant.id,
-      slug: result.restaurant.slug,
-      ownerId: result.owner.id,
-    });
+    res.status(201).json({ restaurantId, slug, ownerId });
   } catch (err) {
-    console.error('Registration error:', err);
+    logError('Registration error', err);
     res.status(500).json({ error: 'Registration failed', code: 'INTERNAL_ERROR' });
+  } finally {
+    await session.endSession();
   }
 });
 
@@ -102,42 +105,53 @@ router.get('/me', requireAuth, async (req, res) => {
     return;
   }
 
-  const owner = await prisma.restaurantOwner.findUnique({
-    where: { userId: userId },
-    include: {
-      restaurant: {
-        include: { subscription: true },
-      },
-    },
-  });
-
+  const owner = await RestaurantOwner.findOne({ userId }).lean();
   if (!owner) {
     res.json({ owner: null });
     return;
   }
 
+  const [restaurant, subscription] = await Promise.all([
+    Restaurant.findById(owner.restaurantId).lean(),
+    Subscription.findOne({ restaurantId: owner.restaurantId }).lean(),
+  ]);
+
+  if (!restaurant) {
+    res.json({ owner: null });
+    return;
+  }
+
+  // Keep in sync with /subscription/status: fast-forward a pending subscription via
+  // Razorpay if the activation webhook hasn't landed yet, so ProtectedRoute's gate
+  // (which reads /me) never redirects away from /dashboard right after a real payment.
+  const syncedSubscription =
+    subscription?.status === 'pending'
+      ? await syncPendingSubscriptionWithRazorpay(subscription, restaurant)
+      : subscription;
+
   res.json({
     owner: {
-      id: owner.id,
+      id: owner._id,
       ownerName: owner.ownerName,
       email: owner.email,
       restaurantId: owner.restaurantId,
     },
     restaurant: {
-      id: owner.restaurant.id,
-      name: owner.restaurant.name,
-      slug: owner.restaurant.slug,
-      plan: owner.restaurant.plan,
-      qrUrl: owner.restaurant.qrUrl,
-      scanCount: owner.restaurant.scanCount,
-      createdAt: owner.restaurant.createdAt,
+      id: restaurant._id,
+      name: restaurant.name,
+      slug: restaurant.slug,
+      plan: restaurant.plan,
+      qrUrl: restaurant.qrUrl,
+      scanCount: restaurant.scanCount,
+      photosUsed: restaurant.photosUsed ?? 0,
+      createdAt: restaurant.createdAt,
     },
-    subscription: owner.restaurant.subscription
+    subscription: syncedSubscription
       ? {
-          id: owner.restaurant.subscription.id,
-          status: owner.restaurant.subscription.status,
-          activatedAt: owner.restaurant.subscription.activatedAt,
-          nextBillingAt: owner.restaurant.subscription.nextBillingAt,
+          id: syncedSubscription._id,
+          status: syncedSubscription.status,
+          activatedAt: syncedSubscription.activatedAt,
+          nextBillingAt: syncedSubscription.nextBillingAt,
         }
       : null,
   });

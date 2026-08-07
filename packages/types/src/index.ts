@@ -6,7 +6,13 @@ export interface Restaurant {
   slug: string;
   plan: string;
   qrUrl?: string;
+  logoUrl?: string;
+  heroTagline?: string;
+  heroHeading1?: string;
+  heroHeading2?: string;
+  heroDescription?: string;
   scanCount: number;
+  photosUsed: number;
   createdAt: string;
 }
 
@@ -55,7 +61,7 @@ export interface Subscription {
 export interface DishSlot {
   id: string;
   restaurantId: string;
-  slotNumber: number; // 1-10
+  slotNumber: number; // 1-3
   dishName?: string;
   description?: string;
   ingredients?: string;
@@ -81,6 +87,7 @@ export interface Dish {
   isVeg: boolean;
   spiceLevel: number; // 0=none 1=mild 2=medium 3=hot
   allergens: string[];
+  ingredients?: string[];
   isAvailable: boolean;
   modelUrl?: string;
   thumbnailUrl?: string;
@@ -153,6 +160,23 @@ export interface AdminStats {
   totalPaid: number;
   leads: number;
   totalQrScans: number;
+  newInquiries: number;
+}
+
+/** A landing-page contact submission or newsletter sign-up. */
+export type InquiryType = 'contact' | 'newsletter';
+export type InquiryStatus = 'new' | 'read' | 'archived';
+
+export interface Inquiry {
+  id: string;
+  type: InquiryType;
+  name: string | null;
+  email: string;
+  phone: string | null;
+  subject: string | null;
+  message: string | null;
+  status: InquiryStatus;
+  createdAt: string;
 }
 
 export interface AdminRestaurant {
@@ -161,4 +185,77 @@ export interface AdminRestaurant {
   subscription: Subscription | null;
   slotsReady: number;
   slotsWithPhotos: number;
+}
+
+// ─── Digital menu scan (Gemini OCR) ──────────────────────────────────────────
+
+/** Lifetime cap on menu photos a single restaurant may ever upload across all scans. */
+export const MAX_MENU_SCAN_PHOTOS = 20;
+
+export interface MenuScanDish {
+  name: string;
+  description: string;
+  price: number;
+  ingredients: string[];
+  isVeg: boolean;
+}
+
+export interface MenuScanCategory {
+  name: string;
+  dishes: MenuScanDish[];
+}
+
+export interface MenuScanDraft {
+  categories: MenuScanCategory[];
+}
+
+export type MenuScanStatus = 'ready' | 'published' | 'discarded';
+
+export interface MenuScanResponse {
+  scanId: string;
+  draft: MenuScanDraft;
+  photosUsed: number;
+  photosRemaining: number;
+}
+
+export interface MenuScanStatusResponse {
+  scanId: string;
+  status: MenuScanStatus;
+  draft: MenuScanDraft;
+}
+
+export interface MenuScanPublishResponse {
+  categoriesCreated: number;
+  dishesCreated: number;
+}
+
+// ─── Digital menu editing (owner-facing CRUD on the live text menu) ─────────
+
+export interface MenuEditResponse {
+  menuId: string;
+  categories: Category[];
+}
+
+export interface CreateCategoryInput {
+  name: string;
+}
+
+export interface UpdateCategoryInput {
+  name: string;
+}
+
+export interface CreateDishInput {
+  name: string;
+  description?: string;
+  price: number;
+  ingredients?: string[];
+  isVeg?: boolean;
+}
+
+export interface UpdateDishInput {
+  name?: string;
+  description?: string;
+  price?: number;
+  ingredients?: string[];
+  isVeg?: boolean;
 }
