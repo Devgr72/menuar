@@ -1,10 +1,24 @@
 import { Router, Response } from 'express';
+import multer from 'multer';
 import { Restaurant, RestaurantOwner, Menu, Category, Dish } from '../db/models/index.js';
 import { requireAuth } from '../middleware/auth.js';
+import { saveFile } from '../services/storage.service.js';
 import { toId } from '../db/serialize.js';
 import type { CreateCategoryInput, UpdateCategoryInput, CreateDishInput, UpdateDishInput } from '@menuar/types';
 
 const router = Router();
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (_req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      cb(new Error('Only image files are allowed'));
+    } else {
+      cb(null, true);
+    }
+  },
+});
 
 /** Looks up the caller's restaurant, or writes a 404 response and returns null. */
 async function requireOwnerRestaurant(userId: string, res: Response) {
@@ -226,6 +240,40 @@ router.delete('/dishes/:dishId', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('[MenuEdit Error]', err);
     res.status(500).json({ error: 'Failed to delete dish', code: 'DISH_DELETE_ERROR', details: String(err) });
+  }
+});
+
+/** POST /api/v1/menu-edit/dishes/:dishId/photo — upload a dish photo */
+router.post('/dishes/:dishId/photo', requireAuth, upload.single('photo'), async (req, res) => {
+  try {
+    const userId = res.locals.userId as string;
+    const ctx = await requireOwnerRestaurant(userId, res);
+    if (!ctx) return;
+
+    const dish = await Dish.findById(req.params.dishId);
+    if (!dish) {
+      res.status(404).json({ error: 'Dish not found', code: 'DISH_NOT_FOUND' });
+      return;
+    }
+    const category = await requireOwnedCategory(dish.categoryId, ctx.restaurant._id, res);
+    if (!category) return;
+
+    if (!req.file) {
+      res.status(400).json({ error: 'No photo uploaded', code: 'NO_FILE' });
+      return;
+    }
+
+    const ext = req.file.mimetype.split('/')[1] || 'jpg';
+    const filename = `${Date.now()}.${ext}`;
+    const { url } = await saveFile(`dish-photos/${ctx.restaurant._id}/${dish._id}`, filename, req.file.buffer);
+
+    dish.thumbnailUrl = url;
+    await dish.save();
+
+    res.json({ thumbnailUrl: url });
+  } catch (err) {
+    console.error('[MenuEdit Error]', err);
+    res.status(500).json({ error: 'Failed to upload dish photo', code: 'PHOTO_UPLOAD_ERROR', details: String(err) });
   }
 });
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { BarChart, Box, Check, Images, IndianRupee, LayoutDashboard, QrCode, ShieldCheck } from "lucide-react";
+import { ArrowLeft, BarChart, Box, Check, Images, IndianRupee, LayoutDashboard, QrCode, ShieldCheck } from "lucide-react";
 import { authClient, signIn } from "../lib/auth-client";
 
 interface Props {
@@ -95,7 +95,12 @@ export default function AuthPage({ mode }: Props) {
     try {
       if (activeMode === "sign-up") {
         const { error } = await authClient.signUp.email({ email, password, name });
-        if (error) throw new Error(error.message ?? "Sign up failed");
+        if (error) {
+          if (error.code === 'USER_ALREADY_EXISTS' || error.message?.toLowerCase().includes('already exists') || error.message?.toLowerCase().includes('exists')) {
+            throw new Error("Email already registered. Please sign in instead.");
+          }
+          throw new Error(error.message ?? "Sign up failed");
+        }
         setNeedsVerification(true);
         setResendCooldown(RESEND_COOLDOWN_SECONDS);
         setFormLoading(false);
@@ -108,6 +113,9 @@ export default function AuthPage({ mode }: Props) {
             setFormLoading(false);
             await authClient.emailOtp.sendVerificationOtp({ email, type: "email-verification" });
             return;
+          }
+          if (error.code === "INVALID_EMAIL_OR_PASSWORD" || error.message?.toLowerCase().includes('invalid email or password')) {
+            throw new Error("Account not found or incorrect password. Please register first if you don't have an account.");
           }
           throw new Error(error.message ?? "Invalid email or password");
         }
@@ -288,9 +296,14 @@ export default function AuthPage({ mode }: Props) {
           </div>
 
           {/* ── Form panel ──────────────────────────────────────────────── */}
-          <div className="flex flex-col justify-center p-6 sm:p-8 lg:px-10 lg:py-8">
+          <div className="flex flex-col justify-center p-6 sm:p-8 lg:px-10 lg:py-8 relative">
+            <Link to="/" className="absolute top-4 right-4 sm:top-6 sm:right-6 lg:top-8 lg:right-8 flex items-center gap-1.5 text-[12px] font-semibold text-dd-muted hover:text-dd-navy transition-colors">
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back
+            </Link>
+
             {/* Brand panel is hidden below md — repeat the mark here */}
-            <Link to="/" className="mb-6 flex items-center gap-3 lg:hidden">
+            <Link to="/" className="mb-6 flex items-center gap-3 lg:hidden mt-4 sm:mt-0">
               <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-xl bg-dd-soft">
                 <img src="/dishdekho-icon.png" alt="" className="h-full w-full object-contain p-1" />
               </span>
@@ -307,8 +320,22 @@ export default function AuthPage({ mode }: Props) {
 
             {needsVerification ? (
               <div className="mt-7 rounded-card border border-dd-orange/25 bg-dd-orange-lt/60 p-5">
-                <p className="text-[14.5px] font-bold text-dd-navy">Verify your email</p>
-                <p className="mt-1 text-[13px] leading-relaxed text-dd-muted">
+                <div className="flex items-center justify-between">
+                  <p className="text-[14.5px] font-bold text-dd-navy">Verify your email</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNeedsVerification(false);
+                      setOtp("");
+                    }}
+                    disabled={verifyLoading || isRedirecting}
+                    className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-dd-muted hover:text-dd-navy disabled:opacity-50 transition-colors"
+                  >
+                    <ArrowLeft className="h-3 w-3" strokeWidth={2.5} />
+                    Back
+                  </button>
+                </div>
+                <p className="mt-2 text-[13px] leading-relaxed text-dd-muted">
                   We sent a 6-digit code to <span className="font-semibold text-dd-navy">{email}</span>. Enter it below to activate your account.
                 </p>
                 <form onSubmit={handleVerifyOtp} className="mt-4 flex flex-col gap-3">

@@ -4,7 +4,7 @@ import { signOut } from '../lib/auth-client'
 import { useDashboard } from '../hooks/useDashboard'
 import QRCodeDisplay from '../components/dashboard/QRCodeDisplay'
 import DishPhotoUploadModal from '../components/dashboard/DishPhotoUploadModal'
-import { updateProfile } from '../api/client'
+import { updateProfile, uploadRestaurantLogo } from '../api/client'
 import type { DishSlot } from '@menuar/types'
 
 // ─── Status config ────────────────────────────────────────────────────────────
@@ -46,10 +46,14 @@ const STATUS_CONFIG = {
 
 // ─── Inline edit hook ─────────────────────────────────────────────────────────
 
-function useInlineEdit(initialOwner: string, initialRestaurant: string) {
+function useInlineEdit(initialOwner: string, initialRestaurant: string, initialHeroFields: { tagline?: string, h1?: string, h2?: string, desc?: string }) {
   const [editing, setEditing] = useState(false)
   const [ownerName, setOwnerName] = useState(initialOwner)
   const [restaurantName, setRestaurantName] = useState(initialRestaurant)
+  const [heroTagline, setHeroTagline] = useState(initialHeroFields.tagline ?? 'Interactive Dining')
+  const [heroHeading1, setHeroHeading1] = useState(initialHeroFields.h1 ?? 'Experience Food')
+  const [heroHeading2, setHeroHeading2] = useState(initialHeroFields.h2 ?? 'Before You Order.')
+  const [heroDescription, setHeroDescription] = useState(initialHeroFields.desc ?? 'Scan, view, and interact with our signature dishes in augmented reality.')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
@@ -60,6 +64,10 @@ function useInlineEdit(initialOwner: string, initialRestaurant: string) {
       await updateProfile({
         ownerName: ownerName.trim() !== initialOwner ? ownerName.trim() : undefined,
         restaurantName: restaurantName.trim() !== initialRestaurant ? restaurantName.trim() : undefined,
+        heroTagline: heroTagline.trim() !== (initialHeroFields.tagline ?? 'Interactive Dining') ? heroTagline.trim() : undefined,
+        heroHeading1: heroHeading1.trim() !== (initialHeroFields.h1 ?? 'Experience Food') ? heroHeading1.trim() : undefined,
+        heroHeading2: heroHeading2.trim() !== (initialHeroFields.h2 ?? 'Before You Order.') ? heroHeading2.trim() : undefined,
+        heroDescription: heroDescription.trim() !== (initialHeroFields.desc ?? 'Scan, view, and interact with our signature dishes in augmented reality.') ? heroDescription.trim() : undefined,
       })
       setEditing(false)
     } catch (err) {
@@ -72,11 +80,15 @@ function useInlineEdit(initialOwner: string, initialRestaurant: string) {
   function cancel() {
     setOwnerName(initialOwner)
     setRestaurantName(initialRestaurant)
+    setHeroTagline(initialHeroFields.tagline ?? 'Interactive Dining')
+    setHeroHeading1(initialHeroFields.h1 ?? 'Experience Food')
+    setHeroHeading2(initialHeroFields.h2 ?? 'Before You Order.')
+    setHeroDescription(initialHeroFields.desc ?? 'Scan, view, and interact with our signature dishes in augmented reality.')
     setSaveError(null)
     setEditing(false)
   }
 
-  return { editing, setEditing, ownerName, setOwnerName, restaurantName, setRestaurantName, saving, saveError, save, cancel }
+  return { editing, setEditing, ownerName, setOwnerName, restaurantName, setRestaurantName, heroTagline, setHeroTagline, heroHeading1, setHeroHeading1, heroHeading2, setHeroHeading2, heroDescription, setHeroDescription, saving, saveError, save, cancel }
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -230,7 +242,7 @@ export default function RestaurantDashboardPage() {
 
 interface WrapperProps {
   owner: { id: string; ownerName: string; email?: string; restaurantId: string; createdAt: string }
-  restaurant: { id: string; name: string; slug: string; plan: string; qrUrl?: string; scanCount: number; photosUsed: number; createdAt: string }
+  restaurant: { id: string; name: string; slug: string; plan: string; qrUrl?: string; logoUrl?: string; heroTagline?: string; heroHeading1?: string; heroHeading2?: string; heroDescription?: string; scanCount: number; photosUsed: number; createdAt: string }
   subscription: { id: string; status: string; activatedAt?: string; nextBillingAt?: string; haltedAt?: string; amount: number } | null
   slots: DishSlot[]
   isHalted: boolean
@@ -248,8 +260,28 @@ function ProfileEditWrapper({
   isHalted, liveCount, memberSince,
   selectedSlot, setSelectedSlot, refetch, navigate, signOut,
 }: WrapperProps) {
-  const edit = useInlineEdit(owner.ownerName, restaurant.name)
+  const edit = useInlineEdit(owner.ownerName, restaurant.name, {
+    tagline: restaurant.heroTagline,
+    h1: restaurant.heroHeading1,
+    h2: restaurant.heroHeading2,
+    desc: restaurant.heroDescription
+  })
   const hasDigitalMenu = restaurant.photosUsed > 0
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingLogo(true)
+    try {
+      await uploadRestaurantLogo(file)
+      refetch()
+    } catch (err) {
+      alert('Failed to upload logo')
+    } finally {
+      setUploadingLogo(false)
+    }
+  }
 
   return (
     <div className="p-4 sm:p-8 lg:p-12">
@@ -384,8 +416,36 @@ function ProfileEditWrapper({
               </div>
 
               <div className="space-y-6">
+                {/* Logo Upload */}
+                <div className="flex items-center gap-4">
+                  {restaurant.logoUrl ? (
+                    <img src={restaurant.logoUrl} alt="Logo" className="w-16 h-16 rounded-xl object-contain bg-white shadow-sm p-1" />
+                  ) : (
+                    <div className="w-16 h-16 rounded-xl bg-[#334155] flex items-center justify-center text-2xl">🏪</div>
+                  )}
+                  <div>
+                    <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-[#FFFFFF10] hover:bg-[#FFFFFF20] text-sm font-bold rounded-xl transition-colors">
+                      {uploadingLogo ? 'Uploading...' : 'Upload Logo'}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={uploadingLogo} />
+                    </label>
+                    <p className="text-[10px] text-[#94A3B8] mt-2">Max 10MB (PNG/JPG)</p>
+                  </div>
+                </div>
+
+                <div className="h-px bg-[#FFFFFF10] my-4" />
+
                 <AdminField label="Owner" value={edit.ownerName} editing={edit.editing} onChange={edit.setOwnerName} />
                 <AdminField label="Restaurant" value={edit.restaurantName} editing={edit.editing} onChange={edit.setRestaurantName} />
+                
+                {edit.editing && (
+                  <div className="pt-4 space-y-6">
+                    <p className="text-xs text-[#FF6B00] font-bold uppercase tracking-widest border-b border-[#FFFFFF10] pb-2">AR Menu Customization</p>
+                    <AdminField label="Hero Tagline (Max 5 words)" value={edit.heroTagline} editing={edit.editing} onChange={edit.setHeroTagline} maxWords={5} />
+                    <AdminField label="Hero Heading Line 1 (Max 2 words)" value={edit.heroHeading1} editing={edit.editing} onChange={edit.setHeroHeading1} maxWords={2} />
+                    <AdminField label="Hero Heading Line 2 (Max 3 words)" value={edit.heroHeading2} editing={edit.editing} onChange={edit.setHeroHeading2} maxWords={3} />
+                    <AdminField label="Hero Description" value={edit.heroDescription} editing={edit.editing} onChange={edit.setHeroDescription} />
+                  </div>
+                )}
                 
                 <div className="pt-6 border-t border-[#FFFFFF10] space-y-4">
                    <div className="flex justify-between items-center">
@@ -448,7 +508,23 @@ function ProfileEditWrapper({
   )
 }
 
-function AdminField({ label, value, editing, onChange }: { label: string; value: string; editing: boolean; onChange: (v: string) => void }) {
+function AdminField({ label, value, editing, onChange, maxWords }: { label: string; value: string; editing: boolean; onChange: (v: string) => void; maxWords?: number }) {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (maxWords) {
+      const words = val.trim().split(/\s+/);
+      // If the user tries to type a new word beyond the limit, ignore the keystroke.
+      // We check words.length and ensure they aren't adding another character if it exceeds.
+      // But if they are just adding spaces or it's empty, we allow it.
+      if (val.trim().length > 0 && words.length > maxWords) {
+        // allow backspacing or editing existing words by strictly blocking length growth beyond maxWords?
+        // simply block if word count is exceeded
+        return;
+      }
+    }
+    onChange(val);
+  };
+
   return (
     <div className="space-y-2">
       <label className="text-[10px] text-[#94A3B8] font-bold uppercase tracking-[0.2em]">{label}</label>
@@ -456,7 +532,7 @@ function AdminField({ label, value, editing, onChange }: { label: string; value:
         <input 
           type="text" 
           value={value} 
-          onChange={(e) => onChange(e.target.value)}
+          onChange={handleChange}
           className="w-full bg-[#334155] border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#FF6B00] outline-none"
         />
       ) : (

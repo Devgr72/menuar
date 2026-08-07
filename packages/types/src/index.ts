@@ -6,6 +6,11 @@ export interface Restaurant {
   slug: string;
   plan: string;
   qrUrl?: string;
+  logoUrl?: string;
+  heroTagline?: string;
+  heroHeading1?: string;
+  heroHeading2?: string;
+  heroDescription?: string;
   scanCount: number;
   photosUsed: number;
   createdAt: string;

@@ -55,6 +55,11 @@ router.get('/dashboard', requireAuth, async (req, res) => {
         slug: restaurant.slug,
         plan: restaurant.plan,
         qrUrl: restaurant.qrUrl,
+        logoUrl: restaurant.logoUrl,
+        heroTagline: restaurant.heroTagline,
+        heroHeading1: restaurant.heroHeading1,
+        heroHeading2: restaurant.heroHeading2,
+        heroDescription: restaurant.heroDescription,
         scanCount: restaurant.scanCount,
         photosUsed: restaurant.photosUsed ?? 0,
         createdAt: restaurant.createdAt,
@@ -81,9 +86,47 @@ router.get('/dashboard', requireAuth, async (req, res) => {
 router.patch('/profile', requireAuth, async (req, res) => {
   const userId = res.locals.userId as string;
 
-  const { ownerName, restaurantName } = req.body as { ownerName?: string; restaurantName?: string };
-  if (!ownerName?.trim() && !restaurantName?.trim()) {
-    res.status(400).json({ error: 'Nothing to update', code: 'NO_DATA' });
+  const { ownerName, restaurantName, heroTagline, heroHeading1, heroHeading2, heroDescription } = req.body as { 
+    ownerName?: string; 
+    restaurantName?: string;
+    heroTagline?: string;
+    heroHeading1?: string;
+    heroHeading2?: string;
+    heroDescription?: string;
+  };
+
+  const owner = await RestaurantOwner.findOne({ userId }).lean();
+  if (!owner) {
+    res.status(404).json({ error: 'Not registered', code: 'NOT_REGISTERED' });
+    return;
+  }
+
+  const updates: Record<string, string> = {};
+  if (restaurantName?.trim()) updates.name = restaurantName.trim();
+  if (heroTagline !== undefined) updates.heroTagline = heroTagline;
+  if (heroHeading1 !== undefined) updates.heroHeading1 = heroHeading1;
+  if (heroHeading2 !== undefined) updates.heroHeading2 = heroHeading2;
+  if (heroDescription !== undefined) updates.heroDescription = heroDescription;
+
+  await Promise.all([
+    ownerName?.trim()
+      ? RestaurantOwner.updateOne({ _id: owner._id }, { ownerName: ownerName.trim() })
+      : Promise.resolve(),
+    Object.keys(updates).length > 0
+      ? Restaurant.updateOne({ _id: owner.restaurantId }, updates)
+      : Promise.resolve(),
+  ]);
+
+  res.json({ ok: true });
+});
+
+/** POST /api/v1/restaurant/logo */
+router.post('/logo', requireAuth, upload.single('logo'), async (req, res) => {
+  const userId = res.locals.userId as string;
+  const file = req.file;
+
+  if (!file) {
+    res.status(400).json({ error: 'No logo uploaded', code: 'NO_FILE' });
     return;
   }
 
@@ -93,16 +136,16 @@ router.patch('/profile', requireAuth, async (req, res) => {
     return;
   }
 
-  await Promise.all([
-    ownerName?.trim()
-      ? RestaurantOwner.updateOne({ _id: owner._id }, { ownerName: ownerName.trim() })
-      : Promise.resolve(),
-    restaurantName?.trim()
-      ? Restaurant.updateOne({ _id: owner.restaurantId }, { name: restaurantName.trim() })
-      : Promise.resolve(),
-  ]);
-
-  res.json({ ok: true });
+  const ext = file.originalname.split('.').pop() || 'png';
+  const dir = `photos/${owner.restaurantId}`;
+  
+  try {
+    const { url } = await saveFile(dir, `logo-${Date.now()}.${ext}`, file.buffer);
+    await Restaurant.updateOne({ _id: owner.restaurantId }, { logoUrl: url });
+    res.json({ logoUrl: url });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to upload logo', code: 'UPLOAD_FAILED' });
+  }
 });
 
 /** GET /api/v1/restaurant/slots */
