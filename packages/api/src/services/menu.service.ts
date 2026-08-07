@@ -15,6 +15,11 @@ export async function getMenuBySlug(restaurantSlug: string) {
     slug: restaurant.slug,
     plan: restaurant.plan,
     qrUrl: restaurant.qrUrl,
+    logoUrl: restaurant.logoUrl,
+    heroTagline: restaurant.heroTagline,
+    heroHeading1: restaurant.heroHeading1,
+    heroHeading2: restaurant.heroHeading2,
+    heroDescription: restaurant.heroDescription,
     scanCount: restaurant.scanCount,
     createdAt: restaurant.createdAt,
   };

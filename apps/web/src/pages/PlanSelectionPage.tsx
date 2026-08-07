@@ -77,7 +77,7 @@ export default function PlanSelectionPage() {
         log('Subscription status result', subscription)
         if (subscription?.status === 'active') {
           log('Already active → redirecting to /dashboard')
-          navigate('/dashboard', { replace: true })
+          window.location.href = '/dashboard'
           return
         }
         setPageState('ready')

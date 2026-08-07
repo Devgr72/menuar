@@ -9,6 +9,7 @@ import {
   updateMenuDish,
   deleteMenuDish,
   getDashboard,
+  uploadDishPhoto,
 } from '../api/client'
 import { MAX_MENU_SCAN_PHOTOS, type Category, type Dish } from '@menuar/types'
 
@@ -17,6 +18,7 @@ export default function EditDigitalMenuPage() {
   const [categories, setCategories] = useState<Category[] | null>(null)
   const [photosRemaining, setPhotosRemaining] = useState<number | null>(null)
   const [loadError, setLoadError] = useState('')
+  const [uploadingDishId, setUploadingDishId] = useState<string | null>(null)
 
   useEffect(() => {
     getMenuEdit()
@@ -101,6 +103,19 @@ export default function EditDigitalMenuPage() {
     }
   }
 
+  async function handlePhotoUpload(categoryId: string, dishId: string, file: File) {
+    if (!file) return
+    setUploadingDishId(dishId)
+    try {
+      const { thumbnailUrl } = await uploadDishPhoto(dishId, file)
+      patchDishLocal(categoryId, dishId, (d) => ({ ...d, thumbnailUrl }))
+    } catch {
+      setLoadError('Failed to upload photo')
+    } finally {
+      setUploadingDishId(null)
+    }
+  }
+
   const totalDishes = categories?.reduce((sum, c) => sum + c.dishes.length, 0) ?? 0
 
   return (
@@ -158,50 +173,114 @@ export default function EditDigitalMenuPage() {
                 </div>
 
                 {category.dishes.map((dish) => (
-                  <div key={dish.id} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start p-4 rounded-2xl bg-[#F8FAFC]">
-                    <input
-                      defaultValue={dish.name}
-                      onBlur={(e) => handleDishFieldBlur(dish.id, { name: e.target.value })}
-                      placeholder="Dish name"
-                      className="sm:col-span-3 rounded-lg border border-[#E2E8F0] px-3 py-2 text-sm"
-                    />
-                    <input
-                      defaultValue={dish.description}
-                      onBlur={(e) => handleDishFieldBlur(dish.id, { description: e.target.value })}
-                      placeholder="Description"
-                      className="sm:col-span-4 rounded-lg border border-[#E2E8F0] px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="number"
-                      defaultValue={dish.price}
-                      onBlur={(e) => handleDishFieldBlur(dish.id, { price: Number(e.target.value) })}
-                      placeholder="Price"
-                      className="sm:col-span-2 rounded-lg border border-[#E2E8F0] px-3 py-2 text-sm"
-                    />
-                    <input
-                      defaultValue={(dish.ingredients ?? []).join(', ')}
-                      onBlur={(e) =>
-                        handleDishFieldBlur(dish.id, {
-                          ingredients: e.target.value.split(',').map((s) => s.trim()).filter(Boolean),
-                        })
-                      }
-                      placeholder="Ingredients (comma separated)"
-                      className="sm:col-span-2 rounded-lg border border-[#E2E8F0] px-3 py-2 text-sm"
-                    />
-                    <label className="sm:col-span-1 flex items-center gap-2 text-xs">
-                      <input
-                        type="checkbox"
-                        checked={dish.isVeg}
-                        onChange={(e) => handleVegToggle(category.id, dish.id, e.target.checked)}
-                      />
-                      Veg
-                    </label>
-                    <button
-                      onClick={() => handleDeleteDish(category.id, dish.id)}
-                      className="sm:col-span-12 text-left text-xs font-bold text-[#EF4444]"
-                    >
-                      Remove dish
-                    </button>
+                  <div key={dish.id} className="relative p-5 rounded-2xl bg-[#F8FAFC] border border-slate-100 space-y-4">
+                    <div className="flex flex-col sm:flex-row gap-5 items-start">
+                      {/* Photo Upload */}
+                      <div className="shrink-0 w-full sm:w-28 h-40 sm:h-28 rounded-xl border-2 border-dashed border-slate-200 bg-white flex flex-col items-center justify-center overflow-hidden relative group cursor-pointer hover:border-[#FF6B00] transition-colors">
+                        {dish.thumbnailUrl ? (
+                          <img src={dish.thumbnailUrl} alt={dish.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="text-slate-400 group-hover:text-[#FF6B00] flex flex-col items-center gap-1.5 transition-colors">
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                            <span className="text-[10px] font-bold uppercase tracking-wider">Add Photo</span>
+                          </div>
+                        )}
+                        
+                        {uploadingDishId === dish.id && (
+                          <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                            <div className="w-5 h-5 border-2 border-[#FF6B00] border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        )}
+                        
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) handlePhotoUpload(category.id, dish.id, file)
+                          }}
+                        />
+                      </div>
+
+                      <div className="flex-1 w-full space-y-4">
+                        {/* Header: Name and Price */}
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                          <div className="sm:col-span-8">
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Dish Name</label>
+                            <input
+                              defaultValue={dish.name}
+                              onBlur={(e) => handleDishFieldBlur(dish.id, { name: e.target.value })}
+                              placeholder="e.g. Margherita Pizza"
+                              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00] outline-none transition-all shadow-sm"
+                            />
+                          </div>
+                          <div className="sm:col-span-4">
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Price</label>
+                            <div className="relative">
+                              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">₹</span>
+                              <input
+                                type="number"
+                                defaultValue={dish.price}
+                                onBlur={(e) => handleDishFieldBlur(dish.id, { price: Number(e.target.value) })}
+                                placeholder="0.00"
+                                className="w-full rounded-xl border border-slate-200 bg-white pl-8 pr-4 py-2.5 text-sm font-semibold text-slate-800 focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00] outline-none transition-all shadow-sm"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Textareas: Description & Ingredients */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Description</label>
+                            <textarea
+                              defaultValue={dish.description}
+                              onBlur={(e) => handleDishFieldBlur(dish.id, { description: e.target.value })}
+                              placeholder="Describe the dish..."
+                              rows={2}
+                              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-600 focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00] outline-none transition-all resize-none shadow-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Ingredients (Comma separated)</label>
+                            <textarea
+                              defaultValue={(dish.ingredients ?? []).join(', ')}
+                              onBlur={(e) =>
+                                handleDishFieldBlur(dish.id, {
+                                  ingredients: e.target.value.split(',').map((s) => s.trim()).filter(Boolean),
+                                })
+                              }
+                              placeholder="e.g. Tomato, Cheese, Basil"
+                              rows={2}
+                              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-600 focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00] outline-none transition-all resize-none shadow-sm"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer: Veg Toggle & Remove Button */}
+                    <div className="flex items-center justify-between pt-2">
+                      <label className="flex items-center gap-2.5 cursor-pointer group">
+                        <div className={`w-5 h-5 rounded-md flex items-center justify-center border shadow-sm transition-colors ${dish.isVeg ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 bg-white group-hover:border-green-500'}`}>
+                          {dish.isVeg && <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                        </div>
+                        <input
+                          type="checkbox"
+                          className="hidden"
+                          checked={dish.isVeg}
+                          onChange={(e) => handleVegToggle(category.id, dish.id, e.target.checked)}
+                        />
+                        <span className="text-sm font-semibold text-slate-600 group-hover:text-slate-800 transition-colors">Vegetarian</span>
+                      </label>
+                      <button
+                        onClick={() => handleDeleteDish(category.id, dish.id)}
+                        className="text-xs font-bold text-red-500 hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        Remove dish
+                      </button>
+                    </div>
                   </div>
                 ))}
 

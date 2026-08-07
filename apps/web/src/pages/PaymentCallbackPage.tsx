@@ -37,7 +37,7 @@ export default function PaymentCallbackPage() {
           if (subscription.status === 'active') {
             if (!cancelled) {
               setState('success')
-              setTimeout(() => navigate('/dashboard', { replace: true }), 2200)
+              setTimeout(() => { window.location.href = '/dashboard' }, 2200)
             }
             return
           }
@@ -73,7 +73,7 @@ export default function PaymentCallbackPage() {
       })
       if (res.ok) {
         setState('success')
-        setTimeout(() => navigate('/dashboard', { replace: true }), 1500)
+        setTimeout(() => { window.location.href = '/dashboard' }, 1500)
       } else {
         const body = await res.json()
         alert(body.error || 'Dev activation failed')

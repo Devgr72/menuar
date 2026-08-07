@@ -54,7 +54,7 @@ const RESPONSE_SCHEMA: Schema = {
                 name: { type: Type.STRING },
                 description: {
                   type: Type.STRING,
-                  description: 'Any descriptive text printed under the dish name. Empty string if none.',
+                  description: 'Descriptive text for the dish. If printed on the menu, extract it. If NOT printed, use your knowledge (tailored to Indian cuisine) to generate a short, appetizing description (max 1 short sentence).',
                 },
                 price: {
                   type: Type.NUMBER,
@@ -63,7 +63,7 @@ const RESPONSE_SCHEMA: Schema = {
                 ingredients: {
                   type: Type.ARRAY,
                   items: { type: Type.STRING },
-                  description: 'Individual ingredients if listed. Empty array if none listed.',
+                  description: 'Individual ingredients. If listed on the menu, extract them. If NOT listed, generate 3-4 key ingredients based on your knowledge of the dish (tailored to Indian cuisine).',
                 },
                 isVeg: {
                   type: Type.BOOLEAN,
@@ -89,6 +89,7 @@ Rules:
 - The same photo set may show the same dish twice (e.g. an overlapping shot) — do not duplicate it.
 - If a price has multiple sizes/variants (e.g. "Half 120 / Full 220"), use the higher price and note the sizes in the description.
 - Skip anything that is not a dish (restaurant name, tagline, page numbers, decorative text).
+- IMPORTANT: If a dish lacks a printed description or ingredients, YOU MUST GENERATE them using your knowledge of Indian cuisine. Keep descriptions very short and punchy (1 sentence max).
 - Output must match the provided response schema exactly.`;
 
 const FILE_ACTIVE_POLL_INTERVAL_MS = 500;

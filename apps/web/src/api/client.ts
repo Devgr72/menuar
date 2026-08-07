@@ -143,7 +143,14 @@ export async function getDashboard(): Promise<DashboardResponse> {
 }
 
 export async function updateProfile(
-  data: { ownerName?: string; restaurantName?: string },
+  data: { 
+    ownerName?: string; 
+    restaurantName?: string;
+    heroTagline?: string;
+    heroHeading1?: string;
+    heroHeading2?: string;
+    heroDescription?: string;
+  },
 ): Promise<{ ok: boolean }> {
   return apiFetch('/api/v1/restaurant/profile', {
     method: 'PATCH',
@@ -165,6 +172,24 @@ export async function uploadSlotPhotos(
   if (meta?.isVeg !== undefined) formData.append('isVeg', meta.isVeg)
 
   const res = await fetch(`${API_URL}/api/v1/restaurant/slots/${slotNumber}/photos`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  })
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: 'Upload failed' }))
+    throw new Error(body.error)
+  }
+
+  return res.json()
+}
+
+export async function uploadRestaurantLogo(photo: File): Promise<{ logoUrl: string }> {
+  const formData = new FormData()
+  formData.append('logo', photo)
+
+  const res = await fetch(`${API_URL}/api/v1/restaurant/logo`, {
     method: 'POST',
     credentials: 'include',
     body: formData,
@@ -350,4 +375,22 @@ export async function updateMenuDish(dishId: string, input: UpdateDishInput): Pr
 
 export async function deleteMenuDish(dishId: string): Promise<{ ok: true }> {
   return apiFetch(`/api/v1/menu-edit/dishes/${dishId}`, { method: 'DELETE' })
+}
+
+export async function uploadDishPhoto(dishId: string, photo: File): Promise<{ thumbnailUrl: string }> {
+  const formData = new FormData()
+  formData.append('photo', photo)
+
+  const res = await fetch(`${API_URL}/api/v1/menu-edit/dishes/${dishId}/photo`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  })
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: 'Upload failed' }))
+    throw new Error(body.error)
+  }
+
+  return res.json()
 }

@@ -9,7 +9,7 @@ interface DishInfoPanelProps {
 
 export default function DishInfoPanel({ dish, onClose, onViewAR }: DishInfoPanelProps) {
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col justify-end">
+    <div className="absolute inset-0 z-[60] flex flex-col justify-end">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300" 

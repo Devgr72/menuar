@@ -31,7 +31,13 @@ export const auth = betterAuth({
       expiresIn: 600,
       overrideDefaultEmailVerification: true,
       sendVerificationOTP: async ({ email, otp, type }) => {
-        if (type === 'email-verification') await sendVerificationOTPEmail(email, otp)
+        console.log(`[auth] sending OTP ${otp} to ${email} (type: ${type})`)
+        try {
+          await sendVerificationOTPEmail(email, otp)
+          console.log(`[auth] successfully sent OTP email to ${email}`);
+        } catch (err) {
+          console.error(`[auth] failed to send OTP email:`, err);
+        }
       },
     }),
   ],
