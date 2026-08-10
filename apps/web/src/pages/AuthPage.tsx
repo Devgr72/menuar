@@ -40,6 +40,13 @@ export default function AuthPage({ mode }: Props) {
     else setActiveMode("sign-up");
   }, [location.pathname]);
 
+  // Capture a partner referral code from ?ref= (e.g. /sign-up?ref=<partnerId>) so it
+  // survives email verification and can be attached at /onboarding's /register call.
+  useEffect(() => {
+    const ref = new URLSearchParams(location.search).get("ref");
+    if (ref) localStorage.setItem("referralPartnerId", ref);
+  }, [location.search]);
+
   const toggleMode = (m: "sign-in" | "sign-up") => {
     setActiveMode(m);
     setFormError(null);

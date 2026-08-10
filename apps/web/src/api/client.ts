@@ -97,7 +97,7 @@ async function apiFetch<T>(
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export async function registerRestaurant(
-  data: { restaurantName: string; ownerName: string; email?: string },
+  data: { restaurantName: string; ownerName: string; email?: string; partnerId?: string },
 ) {
   return apiFetch('/api/v1/auth/register', {
     method: 'POST',

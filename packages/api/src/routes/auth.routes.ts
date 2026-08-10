@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import mongoose from 'mongoose';
-import { Restaurant, RestaurantOwner, DishSlot, Subscription } from '../db/models/index.js';
+import { Restaurant, RestaurantOwner, DishSlot, Subscription, Partner } from '../db/models/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { syncPendingSubscriptionWithRazorpay } from '../services/razorpay.service.js';
 
@@ -61,6 +61,14 @@ router.post('/register', requireAuth, async (req, res) => {
     return;
   }
 
+  // Only attach a referral if it names a real, active partner — an unrecognized
+  // or stale code should register the restaurant normally rather than fail it.
+  let partnerId: string | undefined;
+  if (parsed.data.partnerId) {
+    const partner = await Partner.findOne({ partnerId: parsed.data.partnerId, status: 'Active' }).lean();
+    if (partner) partnerId = partner.partnerId;
+  }
+
   const slug = await generateSlug(restaurantName);
   const session = await mongoose.startSession();
 
@@ -69,7 +77,7 @@ router.post('/register', requireAuth, async (req, res) => {
     let ownerId = '';
 
     await session.withTransaction(async () => {
-      const [restaurant] = await Restaurant.create([{ name: restaurantName, slug, plan: 'free', partnerId: parsed.data.partnerId }], { session });
+      const [restaurant] = await Restaurant.create([{ name: restaurantName, slug, plan: 'free', partnerId }], { session });
 
       const [owner] = await RestaurantOwner.create(
         [{ userId, ownerName, email, restaurantId: restaurant._id }],
@@ -89,10 +97,10 @@ router.post('/register', requireAuth, async (req, res) => {
       ownerId = owner._id;
     });
 
-    if (parsed.data.partnerId) {
+    if (partnerId) {
       import('../services/notification.service.js').then(({ createPartnerNotification }) => {
         createPartnerNotification(
-          parsed.data.partnerId!,
+          partnerId!,
           'RESTAURANT_ONBOARDED',
           'Restaurant Onboarded',
           `Your restaurant ${restaurantName} has been successfully submitted.`
