@@ -92,8 +92,70 @@ export async function updateSlotMeta(
   })
 }
 
-export async function getAdminEvents(token: string) {
-  return apiFetch<{ events: unknown[] }>('/api/v1/admin/events', { token })
+export async function getPaymentEvents(page = 1, limit = 50) {
+  return apiFetch<{
+    events: Array<{
+      id: string
+      eventType: string
+      createdAt: string
+      razorpayEventId: string
+      subscription: {
+        id: string
+        status: string
+        amount: number
+        planType: string
+        restaurant: { name: string; slug: string } | null
+        owner: { ownerName: string; email: string } | null
+      } | null
+    }>
+    total: number
+    page: number
+    limit: number
+  }>(`/api/v1/admin/events?page=${page}&limit=${limit}`)
+}
+
+// ==========================================
+// PARTNER MANAGEMENT
+// ==========================================
+
+export async function getPartners(params: { page?: number; limit?: number; search?: string; status?: string }) {
+  const query = new URLSearchParams();
+  if (params.page) query.append('page', params.page.toString());
+  if (params.limit) query.append('limit', params.limit.toString());
+  if (params.search) query.append('search', params.search);
+  if (params.status) query.append('status', params.status);
+  
+  return apiFetch<any>(`/api/v1/admin/partners?${query.toString()}`);
+}
+
+export async function getPartnerDetails(partnerId: string) {
+  return apiFetch<any>(`/api/v1/admin/partners/${partnerId}`);
+}
+
+export async function getPartnerRestaurants(partnerId: string) {
+  return apiFetch<any>(`/api/v1/admin/partners/${partnerId}/restaurants`);
+}
+
+export async function getPartnerCommissions(partnerId: string) {
+  return apiFetch<any>(`/api/v1/admin/partners/${partnerId}/commissions`);
+}
+
+export async function getPartnerPayouts(partnerId: string) {
+  return apiFetch<any>(`/api/v1/admin/partners/${partnerId}/payouts`);
+}
+
+export async function updatePartnerStatus(partnerId: string, status: string) {
+  return apiFetch<any>(`/api/v1/admin/partners/${partnerId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status })
+  });
+}
+
+export async function createPartnerPayout(partnerId: string, payload: { amount: number; commissionIds: string[]; referenceId?: string }) {
+  return apiFetch<any>(`/api/v1/admin/partners/${partnerId}/payouts`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
 }
 
 export async function regenerateQR(token: string, restaurantId: string): Promise<{ qrUrl: string; arUrl: string }> {

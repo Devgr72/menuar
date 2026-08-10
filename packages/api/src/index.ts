@@ -3,7 +3,11 @@ dotenv.config();
 
 import express from 'express';
 import cors from 'cors';
+import http from 'http';
+import { Server as SocketIOServer } from 'socket.io';
+import jwt from 'jsonwebtoken';
 import { connectDB } from './db/connection.js';
+import { Partner } from './db/models/index.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -80,10 +84,13 @@ async function main() {
   const { default: subscriptionRoutes } = await import('./routes/subscription.routes.js');
   const { default: restaurantRoutes } = await import('./routes/restaurant.routes.js');
   const { default: adminRoutes } = await import('./routes/admin.routes.js');
+  const { default: adminPartnerRoutes } = await import('./routes/adminPartner.routes.js');
   const { default: webhookRoutes } = await import('./routes/webhook.routes.js');
   const { default: inquiryRoutes } = await import('./routes/inquiry.routes.js');
   const { default: menuScanRoutes } = await import('./routes/menuScan.routes.js');
   const { default: menuEditRoutes } = await import('./routes/menuEdit.routes.js');
+  const { default: partnerRoutes } = await import('./routes/partner.routes.js');
+  const { default: partnerNotificationRoutes } = await import('./routes/partnerNotification.routes.js');
   const { startPoller } = await import('./services/pipeline.service.js');
 
   app.use('/api/v1/menu', menuRoutes);
@@ -92,10 +99,13 @@ async function main() {
   app.use('/api/v1/subscription', subscriptionRoutes);
   app.use('/api/v1/restaurant', restaurantRoutes);
   app.use('/api/v1/admin', adminRoutes);
+  app.use('/api/v1/admin/partners', adminPartnerRoutes);
   app.use('/api/v1/webhook', webhookRoutes);
   app.use('/api/v1/inquiry', inquiryRoutes);
   app.use('/api/v1/menu-scan', menuScanRoutes);
   app.use('/api/v1/menu-edit', menuEditRoutes);
+  app.use('/api/v1/partner', partnerRoutes);
+  app.use('/api/v1/partner-notification', partnerNotificationRoutes);
 
   // Dev-only manual activation route (never mounted in production)
   if (IS_DEV) {
@@ -141,7 +151,62 @@ async function main() {
   console.log('  POST /api/v1/admin/slots/:slotId/glb');
   console.log('  POST /api/v1/webhook/razorpay');
 
-  app.listen(PORT, () => {
+  const server = http.createServer(app);
+  
+  // Setup Socket.IO
+  const io = new SocketIOServer(server, {
+    cors: {
+      origin: allowedOrigins,
+      credentials: true
+    }
+  });
+
+  io.use(async (socket, next) => {
+    try {
+      const cookies = socket.handshake.headers.cookie;
+      let token = null;
+      if (cookies) {
+        const tokenCookie = cookies.split(';').find(c => c.trim().startsWith('partnerToken='));
+        if (tokenCookie) {
+          token = tokenCookie.split('=')[1];
+        }
+      }
+
+      if (!token) {
+        return next(new Error('Unauthorized'));
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
+      if (decoded.role !== 'partner') {
+        return next(new Error('Forbidden'));
+      }
+
+      const partner = await Partner.findById(decoded.id).select('partnerId status');
+      if (!partner || partner.status !== 'Active') {
+        return next(new Error('Partner inactive'));
+      }
+
+      socket.data.partnerId = partner.partnerId;
+      next();
+    } catch (err) {
+      next(new Error('Authentication error'));
+    }
+  });
+
+  io.on('connection', (socket) => {
+    const partnerId = socket.data.partnerId;
+    socket.join(`partner:${partnerId}`);
+    console.log(`Socket connected & joined room: partner:${partnerId}`);
+    
+    socket.on('disconnect', () => {
+      console.log(`Socket disconnected: partner:${partnerId}`);
+    });
+  });
+
+  // Store IO instance globally to use in services
+  (global as any).io = io;
+
+  server.listen(PORT, () => {
     console.log(`MenuAR API running on port ${PORT}`);
   });
 }

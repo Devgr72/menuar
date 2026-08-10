@@ -6,9 +6,11 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useAdminStats, useAdminRestaurants } from '../hooks/useAdmin'
 import AdminSlotDetail from '../components/AdminSlotDetail'
 import AdminInquiries from '../components/AdminInquiries'
+import AdminPartners from '../components/AdminPartners'
+import AdminNotificationBell from '../components/AdminNotificationBell'
 import type { AdminRestaurant } from '@menuar/types'
 
-type Tab = 'dashboard' | 'restaurants' | 'users' | 'transactions' | 'inquiries'
+type Tab = 'dashboard' | 'restaurants' | 'users' | 'transactions' | 'inquiries' | 'partners'
 type Filter = 'all' | 'paid' | 'lead'
 
 interface DetailView {
@@ -248,6 +250,7 @@ function AdminPageInner() {
     { id: 'users', label: 'Users' },
     { id: 'transactions', label: 'Transactions' },
     { id: 'inquiries', label: 'Inquiries' },
+    { id: 'partners', label: 'Partners' },
   ]
 
   return (
@@ -261,12 +264,15 @@ function AdminPageInner() {
             <span className="text-gray-400 font-semibold ml-1.5">Admin</span>
           </h1>
         </div>
-        <button
-          onClick={signOut}
-          className="text-gray-600 hover:text-red-600 text-sm font-medium border border-gray-200 px-4 py-1.5 rounded-lg hover:border-red-200 hover:bg-red-50 transition-colors"
-        >
-          Sign out
-        </button>
+        <div className="flex items-center gap-4">
+          {token && <AdminNotificationBell token={token} />}
+          <button
+            onClick={signOut}
+            className="text-gray-600 hover:text-red-600 text-sm font-medium border border-gray-200 px-4 py-1.5 rounded-lg hover:border-red-200 hover:bg-red-50 transition-colors"
+          >
+            Sign out
+          </button>
+        </div>
       </header>
 
       {/* Tabs */}
@@ -297,6 +303,7 @@ function AdminPageInner() {
               {[
                 { label: 'Registered', value: stats?.totalRegistered, color: 'text-gray-800', bg: 'hover:border-gray-400', filter: 'all' as Filter, icon: '🏪' },
                 { label: 'Paid', value: stats?.totalPaid, color: 'text-green-600', bg: 'hover:border-green-400', filter: 'paid' as Filter, icon: '✅' },
+                { label: 'Partners', value: stats?.totalPartners || 0, color: 'text-purple-600', bg: 'hover:border-purple-400', filter: null, goTo: 'partners' as Tab, icon: '🤝' },
                 { label: 'Leads', value: stats?.leads, color: 'text-yellow-600', bg: 'hover:border-yellow-400', filter: 'lead' as Filter, icon: '🎯' },
                 { label: 'QR Scans', value: stats?.totalQrScans, color: 'text-blue-600', bg: 'hover:border-blue-400', filter: null, icon: '📱' },
                 { label: 'New Inquiries', value: stats?.newInquiries, color: 'text-orange-600', bg: 'hover:border-orange-400', filter: null, goTo: 'inquiries' as Tab, icon: '📥' },
@@ -637,6 +644,9 @@ function AdminPageInner() {
             </div>
           </div>
         )}
+
+        {/* ── PARTNERS TAB ── */}
+        {tab === 'partners' && token && <AdminPartners token={token} />}
 
       </main>
     </div>

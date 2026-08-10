@@ -105,6 +105,59 @@ export async function registerRestaurant(
   })
 }
 
+export async function registerPartner(
+  data: import('@menuar/types').PartnerRegistrationInput,
+): Promise<{ ok: boolean; partnerId: string }> {
+  return apiFetch('/api/v1/partner/register', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function loginPartner(emailOrMobile: string, password: string): Promise<{ ok: boolean; partnerId: string }> {
+  return apiFetch('/api/v1/partner/login', {
+    method: 'POST',
+    body: JSON.stringify({ emailOrMobile, password }),
+  })
+}
+
+export async function getPartnerNotifications(page = 1, limit = 20): Promise<{
+  data: import('@menuar/types').PartnerNotification[];
+  pagination: { total: number; page: number; limit: number; totalPages: number };
+}> {
+  return apiFetch(`/api/v1/partner-notification?page=${page}&limit=${limit}`)
+}
+
+export async function getPartnerProfile(): Promise<{ partner: any }> {
+  return apiFetch('/api/v1/partner/me')
+}
+
+export async function getPartnerDashboard(): Promise<{
+  stats: {
+    totalRestaurants: number
+    activeRestaurants: number
+    totalEarnings: number
+    pendingEarnings: number
+    paidEarnings: number
+  }
+  restaurants: any[]
+  commissions: any[]
+}> {
+  return apiFetch('/api/v1/partner/dashboard')
+}
+
+export async function getPartnerUnreadCount(): Promise<{ count: number }> {
+  return apiFetch('/api/v1/partner-notification/unread-count')
+}
+
+export async function markPartnerNotificationRead(id: string): Promise<{ ok: boolean }> {
+  return apiFetch(`/api/v1/partner-notification/${id}/read`, { method: 'POST' })
+}
+
+export async function markAllPartnerNotificationsRead(): Promise<{ ok: boolean }> {
+  return apiFetch('/api/v1/partner-notification/read-all', { method: 'POST' })
+}
+
 export async function getMe() {
   return apiFetch<{
     owner: { id: string; ownerName: string; email?: string; restaurantId: string } | null

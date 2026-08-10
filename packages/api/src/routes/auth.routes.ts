@@ -19,6 +19,7 @@ const RegisterSchema = z.object({
   restaurantName: z.string().min(2).max(100).trim(),
   ownerName: z.string().min(2).max(100).trim(),
   email: z.string().email().optional(),
+  partnerId: z.string().optional(),
 });
 
 /** Generate a URL-safe slug from restaurant name, retrying with a suffix on collision. */
@@ -68,7 +69,7 @@ router.post('/register', requireAuth, async (req, res) => {
     let ownerId = '';
 
     await session.withTransaction(async () => {
-      const [restaurant] = await Restaurant.create([{ name: restaurantName, slug, plan: 'free' }], { session });
+      const [restaurant] = await Restaurant.create([{ name: restaurantName, slug, plan: 'free', partnerId: parsed.data.partnerId }], { session });
 
       const [owner] = await RestaurantOwner.create(
         [{ userId, ownerName, email, restaurantId: restaurant._id }],
@@ -87,6 +88,17 @@ router.post('/register', requireAuth, async (req, res) => {
       restaurantId = restaurant._id;
       ownerId = owner._id;
     });
+
+    if (parsed.data.partnerId) {
+      import('../services/notification.service.js').then(({ createPartnerNotification }) => {
+        createPartnerNotification(
+          parsed.data.partnerId!,
+          'RESTAURANT_ONBOARDED',
+          'Restaurant Onboarded',
+          `Your restaurant ${restaurantName} has been successfully submitted.`
+        );
+      });
+    }
 
     res.status(201).json({ restaurantId, slug, ownerId });
   } catch (err) {

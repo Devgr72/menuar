@@ -11,4 +11,8 @@ export { DishPhoto } from './DishPhoto.js';
 export { DishView } from './DishView.js';
 export { QrCode } from './QrCode.js';
 export { Inquiry } from './Inquiry.js';
+export { Partner } from './Partner.js';
+export { PartnerNotification } from './PartnerNotification.js';
+export { PartnerCommission } from './PartnerCommission.js';
+export { PartnerPayout } from './PartnerPayout.js';
 export { MenuScan } from './MenuScan.js';
