@@ -28,11 +28,19 @@ export default function OnboardingPage() {
     setError(null)
 
     try {
+      const partnerRef = localStorage.getItem('partnerRef');
+
       await registerRestaurant({
         ownerName: form.ownerName.trim(),
         restaurantName: form.restaurantName.trim(),
         email: session?.user?.email,
+        ...(partnerRef ? { partnerId: partnerRef } : {}),
       })
+
+      // Clean up the ref so it doesn't get used for another account on the same machine
+      if (partnerRef) {
+        localStorage.removeItem('partnerRef');
+      }
 
       setSuccess(true)
 
