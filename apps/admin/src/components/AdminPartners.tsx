@@ -16,7 +16,7 @@ export default function AdminPartners({ token }: { token: string }) {
   const fetchPartners = useCallback(async (p = 1) => {
     setLoading(true);
     try {
-      const res = await getPartners({ page: p, limit: 20, search, status });
+      const res = await getPartners(token, { page: p, limit: 20, search, status });
       if (res.data) {
         setPartners(res.data);
         setTotal(res.total);
@@ -37,6 +37,7 @@ export default function AdminPartners({ token }: { token: string }) {
     return (
       <AdminPartnerDetail 
         partnerId={selectedPartnerId} 
+        token={token}
         onBack={() => setSelectedPartnerId(null)} 
       />
     );

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { Restaurant, RestaurantOwner, Subscription, DishSlot, PaymentEvent, Inquiry } from '../db/models/index.js';
+import { Restaurant, RestaurantOwner, Subscription, DishSlot, PaymentEvent, Inquiry, Partner } from '../db/models/index.js';
 import { requireAdminAuth } from '../middleware/auth.js';
 import { saveFile, deleteFile } from '../services/storage.service.js';
 import { z } from 'zod';
