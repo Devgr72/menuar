@@ -118,42 +118,44 @@ export async function getPaymentEvents(page = 1, limit = 50) {
 // PARTNER MANAGEMENT
 // ==========================================
 
-export async function getPartners(params: { page?: number; limit?: number; search?: string; status?: string }) {
+export async function getPartners(token: string, params: { page?: number; limit?: number; search?: string; status?: string }) {
   const query = new URLSearchParams();
   if (params.page) query.append('page', params.page.toString());
   if (params.limit) query.append('limit', params.limit.toString());
   if (params.search) query.append('search', params.search);
   if (params.status) query.append('status', params.status);
   
-  return apiFetch<any>(`/api/v1/admin/partners?${query.toString()}`);
+  return apiFetch<any>(`/api/v1/admin/partners?${query.toString()}`, { token });
 }
 
-export async function getPartnerDetails(partnerId: string) {
-  return apiFetch<any>(`/api/v1/admin/partners/${partnerId}`);
+export async function getPartnerDetails(token: string, partnerId: string) {
+  return apiFetch<any>(`/api/v1/admin/partners/${partnerId}`, { token });
 }
 
-export async function getPartnerRestaurants(partnerId: string) {
-  return apiFetch<any>(`/api/v1/admin/partners/${partnerId}/restaurants`);
+export async function getPartnerRestaurants(token: string, partnerId: string) {
+  return apiFetch<any>(`/api/v1/admin/partners/${partnerId}/restaurants`, { token });
 }
 
-export async function getPartnerCommissions(partnerId: string) {
-  return apiFetch<any>(`/api/v1/admin/partners/${partnerId}/commissions`);
+export async function getPartnerCommissions(token: string, partnerId: string) {
+  return apiFetch<any>(`/api/v1/admin/partners/${partnerId}/commissions`, { token });
 }
 
-export async function getPartnerPayouts(partnerId: string) {
-  return apiFetch<any>(`/api/v1/admin/partners/${partnerId}/payouts`);
+export async function getPartnerPayouts(token: string, partnerId: string) {
+  return apiFetch<any>(`/api/v1/admin/partners/${partnerId}/payouts`, { token });
 }
 
-export async function updatePartnerStatus(partnerId: string, status: string) {
+export async function updatePartnerStatus(token: string, partnerId: string, status: string) {
   return apiFetch<any>(`/api/v1/admin/partners/${partnerId}/status`, {
     method: 'PATCH',
+    token,
     body: JSON.stringify({ status })
   });
 }
 
-export async function createPartnerPayout(partnerId: string, payload: { amount: number; commissionIds: string[]; referenceId?: string }) {
+export async function createPartnerPayout(token: string, partnerId: string, payload: { amount: number; commissionIds: string[]; referenceId?: string }) {
   return apiFetch<any>(`/api/v1/admin/partners/${partnerId}/payouts`, {
     method: 'POST',
+    token,
     body: JSON.stringify(payload)
   });
 }

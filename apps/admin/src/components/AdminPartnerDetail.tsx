@@ -8,7 +8,7 @@ import {
   createPartnerPayout
 } from '../api/client';
 
-export default function AdminPartnerDetail({ partnerId, onBack }: { partnerId: string, onBack: () => void }) {
+export default function AdminPartnerDetail({ partnerId, token, onBack }: { partnerId: string, token: string, onBack: () => void }) {
   const [tab, setTab] = useState<'overview' | 'restaurants' | 'commissions' | 'payouts'>('overview');
   
   const [partner, setPartner] = useState<any>(null);
@@ -23,10 +23,10 @@ export default function AdminPartnerDetail({ partnerId, onBack }: { partnerId: s
     setLoading(true);
     try {
       const [det, rest, comm, pay] = await Promise.all([
-        getPartnerDetails(partnerId),
-        getPartnerRestaurants(partnerId),
-        getPartnerCommissions(partnerId),
-        getPartnerPayouts(partnerId)
+        getPartnerDetails(token, partnerId),
+        getPartnerRestaurants(token, partnerId),
+        getPartnerCommissions(token, partnerId),
+        getPartnerPayouts(token, partnerId)
       ]);
       setPartner(det.partner);
       setStats(det.stats);
@@ -47,7 +47,7 @@ export default function AdminPartnerDetail({ partnerId, onBack }: { partnerId: s
   const handleStatusChange = async (newStatus: string) => {
     if (!confirm(`Are you sure you want to change status to ${newStatus}?`)) return;
     try {
-      await updatePartnerStatus(partnerId, newStatus);
+      await updatePartnerStatus(token, partnerId, newStatus);
       fetchAll();
     } catch (err) {
       alert('Failed to update status');
@@ -66,7 +66,7 @@ export default function AdminPartnerDetail({ partnerId, onBack }: { partnerId: s
     if (ref === null) return;
 
     try {
-      await createPartnerPayout(partnerId, { amount, commissionIds: pendingComms, referenceId: ref });
+      await createPartnerPayout(token, partnerId, { amount, commissionIds: pendingComms, referenceId: ref });
       alert('Payout processed successfully');
       fetchAll();
     } catch (err) {
