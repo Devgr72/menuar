@@ -9,19 +9,28 @@ import { toId, toIds } from '../db/serialize.js';
 
 const router = Router();
 
-const glbUpload = multer({
+const modelUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 25 * 1024 * 1024, files: 1 }, // 25MB for GLB
+  limits: { fileSize: 25 * 1024 * 1024, files: 2 }, // 25MB per file (GLB + USDZ)
   fileFilter: (_req, file, cb) => {
-    const isGlb =
-      file.originalname.toLowerCase().endsWith('.glb') ||
-      file.mimetype === 'model/gltf-binary' ||
-      file.mimetype === 'application/octet-stream';
-    if (!isGlb) {
-      cb(new Error('Only GLB files are allowed'));
-    } else {
-      cb(null, true);
+    const name = file.originalname.toLowerCase();
+    if (file.fieldname === 'glb') {
+      const isGlb =
+        name.endsWith('.glb') ||
+        file.mimetype === 'model/gltf-binary' ||
+        file.mimetype === 'application/octet-stream';
+      if (!isGlb) return cb(new Error('The "glb" field must be a .glb file'));
+      return cb(null, true);
     }
+    if (file.fieldname === 'usdz') {
+      const isUsdz =
+        name.endsWith('.usdz') ||
+        file.mimetype === 'model/vnd.usdz+zip' ||
+        file.mimetype === 'application/octet-stream';
+      if (!isUsdz) return cb(new Error('The "usdz" field must be a .usdz file'));
+      return cb(null, true);
+    }
+    cb(new Error(`Unexpected field: ${file.fieldname}`));
   },
 });
 
@@ -193,7 +202,7 @@ router.get('/restaurants/:restaurantId/slots', requireAdminAuth, async (req, res
 });
 
 /** POST /api/v1/admin/slots/:slotId/glb — upload GLB and mark slot ready */
-router.post('/slots/:slotId/glb', requireAdminAuth, glbUpload.single('glb'), async (req, res) => {
+router.post('/slots/:slotId/glb', requireAdminAuth, modelUpload.single('glb'), async (req, res) => {
   const file = req.file;
   if (!file) {
     res.status(400).json({ error: 'No GLB file provided', code: 'NO_FILE' });

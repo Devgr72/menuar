@@ -2,6 +2,22 @@ import { useState, useEffect, useCallback } from 'react'
 import { getAdminStats, getAdminRestaurants, getAdminInquiries } from '../api/client'
 import type { AdminStats, AdminRestaurant, Inquiry } from '@menuar/types'
 
+/**
+ * A stale/invalid admin JWT (e.g. signed before JWT_SECRET was set in the API's
+ * env, back when it fell back to 'fallback-secret') 401s forever otherwise —
+ * drop it and reload so the user lands back on the login screen.
+ */
+function handleAdminAuthError(err: unknown): boolean {
+  const status = (err as { status?: number } | undefined)?.status
+  if (status === 401) {
+    localStorage.removeItem('adminToken')
+    window.location.reload()
+    return true
+  }
+  console.error(err)
+  return false
+}
+
 export function useAdminStats(token: string | null) {
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -12,6 +28,8 @@ export function useAdminStats(token: string | null) {
     try {
       const result = await getAdminStats(token)
       setStats(result)
+    } catch (err) {
+      handleAdminAuthError(err)
     } finally {
       setLoading(false)
     }
@@ -36,6 +54,8 @@ export function useAdminRestaurants(token: string | null, filter: 'all' | 'paid'
       setRestaurants(result.data)
       setTotal(result.total)
       setPage(result.page)
+    } catch (err) {
+      handleAdminAuthError(err)
     } finally {
       setLoading(false)
     }
@@ -65,6 +85,8 @@ export function useAdminInquiries(token: string | null, filter: InquiryFilter = 
       setInquiries(result.data)
       setTotal(result.total)
       setPage(result.page)
+    } catch (err) {
+      handleAdminAuthError(err)
     } finally {
       setLoading(false)
     }

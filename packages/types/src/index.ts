@@ -164,6 +164,7 @@ export interface AdminStats {
   leads: number;
   totalQrScans: number;
   newInquiries: number;
+  totalPartners: number;
 }
 
 /** A landing-page contact submission or newsletter sign-up. */

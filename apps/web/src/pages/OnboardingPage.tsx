@@ -54,7 +54,8 @@ export default function OnboardingPage() {
       const code = (err as { code?: string }).code
 
       if (code === 'ALREADY_REGISTERED' || msg.includes('ALREADY_REGISTERED')) {
-        // Already registered — go straight to plan selection
+        // Already registered — referral doesn't apply to an existing account
+        localStorage.removeItem('referralPartnerId')
         window.location.href = '/select-plan'
       } else {
         setError(msg)
