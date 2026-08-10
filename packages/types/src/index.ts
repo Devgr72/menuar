@@ -262,3 +262,61 @@ export interface UpdateDishInput {
   ingredients?: string[];
   isVeg?: boolean;
 }
+
+// ─── Partner System ─────────────────────────────────────────────────────────
+
+export interface Partner {
+  id: string;
+  partnerId: string;
+  fullName: string;
+  mobileNumber: string;
+  email: string;
+  city: string;
+  state: string;
+  qualification: string;
+  college?: string;
+  currentStatus: string;
+  salesExperience: string;
+  dailyTime: string;
+  preferredMethod: string;
+  status: 'Active' | 'Inactive';
+  createdAt: string;
+}
+
+export type PartnerNotificationType =
+  | 'RESTAURANT_ONBOARDED'
+  | 'RESTAURANT_APPROVED'
+  | 'RESTAURANT_REJECTED'
+  | 'SUBSCRIPTION_STARTED'
+  | 'COMMISSION_EARNED'
+  | 'RENEWAL_COMMISSION'
+  | 'RESTAURANT_PAYMENT_DUE'
+  | 'PAYOUT_PROCESSED'
+  | 'ACCOUNT_STATUS'
+  | 'GENERAL';
+
+export interface PartnerNotification {
+  id: string;
+  partnerId: string;
+  type: PartnerNotificationType;
+  title: string;
+  message: string;
+  data?: any;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface PartnerRegistrationInput {
+  fullName: string;
+  mobileNumber: string;
+  email: string;
+  city: string;
+  state: string;
+  qualification: string;
+  college?: string;
+  currentStatus: string;
+  salesExperience: string;
+  dailyTime: string;
+  preferredMethod: string;
+  password: string;
+}

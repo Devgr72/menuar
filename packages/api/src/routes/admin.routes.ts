@@ -52,11 +52,12 @@ router.post('/login', async (req, res) => {
 
 /** GET /api/v1/admin/stats */
 router.get('/stats', requireAdminAuth, async (_req, res) => {
-  const [totalRegistered, totalPaid, scanAgg, newInquiries] = await Promise.all([
+  const [totalRegistered, totalPaid, scanAgg, newInquiries, totalPartners] = await Promise.all([
     RestaurantOwner.countDocuments(),
     Subscription.countDocuments({ status: 'active' }),
     Restaurant.aggregate([{ $group: { _id: null, total: { $sum: '$scanCount' } } }]),
     Inquiry.countDocuments({ status: 'new' }),
+    Partner.countDocuments(),
   ]);
 
   res.json({
@@ -65,6 +66,7 @@ router.get('/stats', requireAdminAuth, async (_req, res) => {
     leads: totalRegistered - totalPaid,
     totalQrScans: scanAgg[0]?.total ?? 0,
     newInquiries,
+    totalPartners,
   });
 });
 

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
-import { Subscription, Restaurant, Menu, Category, PaymentEvent } from '../db/models/index.js';
+import { Subscription, Restaurant, Menu, Category, PaymentEvent, PartnerCommission } from '../db/models/index.js';
 import { verifyWebhookSignature } from '../services/razorpay.service.js';
 import QRCode from 'qrcode';
 import { saveFile } from '../services/storage.service.js';
@@ -95,6 +95,28 @@ router.post('/razorpay', async (req, res) => {
           createDefaultMenu(subscription.restaurantId).catch((err) =>
             console.error('Default menu creation failed:', err),
           );
+
+          // Partner Notification
+          if (restaurant.partnerId) {
+            await PartnerCommission.create({
+              partnerId: restaurant.partnerId,
+              restaurantId: restaurant._id,
+              subscriptionId: subscription._id,
+              type: 'FIRST_SUBSCRIPTION',
+              amount: 150,
+              status: 'PENDING',
+            });
+
+            import('../services/notification.service.js').then(({ createPartnerNotification, emitAdminEvent }) => {
+              createPartnerNotification(
+                restaurant.partnerId!,
+                'COMMISSION_EARNED',
+                'Commission Earned 💰',
+                `You earned ₹150 from ${restaurant.name}.`
+              );
+              emitAdminEvent('admin:commission_earned', { partnerId: restaurant.partnerId, amount: 150 });
+            });
+          }
         }
         break;
       }
@@ -111,6 +133,27 @@ router.post('/razorpay', async (req, res) => {
           `${eventType}-${razorpaySubId}-${Date.now()}`,
           event.payload,
         );
+
+        if (restaurant?.partnerId) {
+          await PartnerCommission.create({
+            partnerId: restaurant.partnerId,
+            restaurantId: restaurant._id,
+            subscriptionId: subscription._id,
+            type: 'RENEWAL',
+            amount: 100,
+            status: 'PENDING',
+          });
+
+          import('../services/notification.service.js').then(({ createPartnerNotification, emitAdminEvent }) => {
+            createPartnerNotification(
+              restaurant.partnerId!,
+              'RENEWAL_COMMISSION',
+              'Recurring Commission Earned 💰',
+              `You earned ₹100 from ${restaurant.name}.`
+            );
+            emitAdminEvent('admin:commission_earned', { partnerId: restaurant.partnerId, amount: 100 });
+          });
+        }
         break;
       }
 
@@ -144,6 +187,17 @@ router.post('/razorpay', async (req, res) => {
           razorpayEventId: `${eventType}-${razorpaySubId}-${Date.now()}`,
           payload: event.payload,
         });
+
+        if (restaurant?.partnerId) {
+          import('../services/notification.service.js').then(({ createPartnerNotification }) => {
+            createPartnerNotification(
+              restaurant.partnerId!,
+              'RESTAURANT_PAYMENT_DUE',
+              'Subscription Payment Due',
+              `${restaurant.name}'s subscription requires attention.`
+            );
+          });
+        }
         break;
       }
 
