@@ -54,12 +54,14 @@ export async function uploadSlotGLB(
   token: string,
   slotId: string,
   glbFile: File,
+  usdzFile: File,
   meta: { dishName?: string; description?: string; ingredients?: string; price?: number; isVeg?: boolean },
-): Promise<{ slotId: string; glbUrl: string; status: string }> {
-  // We need to use standard fetch for file uploads, overriding Content-Type 
+): Promise<{ slotId: string; glbUrl: string; usdzUrl: string; status: string }> {
+  // We need to use standard fetch for file uploads, overriding Content-Type
   // so browser boundary forms correctly.
   const formData = new FormData()
   formData.append('glb', glbFile)
+  formData.append('usdz', usdzFile)
   if (meta.dishName) formData.append('dishName', meta.dishName)
   if (meta.description) formData.append('description', meta.description)
   if (meta.ingredients) formData.append('ingredients', meta.ingredients)
