@@ -61,7 +61,9 @@ async function main() {
 
   const { isEmailConfigured } = await import('./services/email.service.js');
   if (!isEmailConfigured()) {
-    throw new Error('Email is not configured — set SMTP_HOST, SMTP_USER, SMTP_PASS, SMTP_FROM');
+    console.warn(
+      '⚠ Email is not configured (SMTP_HOST/SMTP_USER/SMTP_PASS/SMTP_FROM) — inquiry notifications and OTP verification emails will silently fail to send.',
+    );
   }
 
   await connectDB();
