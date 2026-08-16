@@ -201,45 +201,65 @@ router.get('/restaurants/:restaurantId/slots', requireAdminAuth, async (req, res
   res.json({ slots: slotsWithUrls });
 });
 
-/** POST /api/v1/admin/slots/:slotId/glb — upload GLB and mark slot ready */
-router.post('/slots/:slotId/glb', requireAdminAuth, modelUpload.single('glb'), async (req, res) => {
-  const file = req.file;
-  if (!file) {
-    res.status(400).json({ error: 'No GLB file provided', code: 'NO_FILE' });
-    return;
-  }
+/** POST /api/v1/admin/slots/:slotId/glb — upload GLB + USDZ pair and mark slot ready */
+router.post(
+  '/slots/:slotId/glb',
+  requireAdminAuth,
+  modelUpload.fields([
+    { name: 'glb', maxCount: 1 },
+    { name: 'usdz', maxCount: 1 },
+  ]),
+  async (req, res) => {
+    const files = req.files as { glb?: Express.Multer.File[]; usdz?: Express.Multer.File[] } | undefined;
+    const glbFile = files?.glb?.[0];
+    const usdzFile = files?.usdz?.[0];
 
-  const slot = await DishSlot.findById(req.params.slotId);
-  if (!slot) {
-    res.status(404).json({ error: 'Slot not found', code: 'NOT_FOUND' });
-    return;
-  }
+    if (!glbFile) {
+      res.status(400).json({ error: 'No GLB file provided', code: 'NO_FILE' });
+      return;
+    }
+    if (!usdzFile) {
+      res.status(400).json({ error: 'No USDZ file provided', code: 'NO_FILE' });
+      return;
+    }
 
-  // Delete old GLB if exists
-  if (slot.glbKey) {
-    await deleteFile(slot.glbKey).catch(() => {});
-  }
+    const slot = await DishSlot.findById(req.params.slotId);
+    if (!slot) {
+      res.status(404).json({ error: 'Slot not found', code: 'NOT_FOUND' });
+      return;
+    }
 
-  const { key, url } = await saveFile(`models/${slot.restaurantId}/slot-${slot.slotNumber}`, 'dish.glb', file.buffer);
+    // Delete old model files if they exist
+    if (slot.glbKey) await deleteFile(slot.glbKey).catch(() => {});
+    if (slot.usdzKey) await deleteFile(slot.usdzKey).catch(() => {});
 
-  const body = req.body as Record<string, string>;
-  const updated = await DishSlot.findByIdAndUpdate(
-    slot._id,
-    {
-      glbKey: key,
-      glbUrl: url,
-      status: 'glb_ready',
-      ...(body.dishName && { dishName: body.dishName }),
-      ...(body.description && { description: body.description }),
-      ...(body.ingredients && { ingredients: body.ingredients }),
-      ...(body.price && { price: parseFloat(body.price) }),
-      ...(body.isVeg !== undefined && { isVeg: body.isVeg === 'true' }),
-    },
-    { new: true },
-  ).lean();
+    const dir = `models/${slot.restaurantId}/slot-${slot.slotNumber}`;
+    const [{ key: glbKey, url: glbUrl }, { key: usdzKey, url: usdzUrl }] = await Promise.all([
+      saveFile(dir, 'dish.glb', glbFile.buffer),
+      saveFile(dir, 'dish.usdz', usdzFile.buffer),
+    ]);
 
-  res.json({ slotId: updated!._id, glbUrl: updated!.glbUrl, status: updated!.status });
-});
+    const body = req.body as Record<string, string>;
+    const updated = await DishSlot.findByIdAndUpdate(
+      slot._id,
+      {
+        glbKey,
+        glbUrl,
+        usdzKey,
+        usdzUrl,
+        status: 'glb_ready',
+        ...(body.dishName && { dishName: body.dishName }),
+        ...(body.description && { description: body.description }),
+        ...(body.ingredients && { ingredients: body.ingredients }),
+        ...(body.price && { price: parseFloat(body.price) }),
+        ...(body.isVeg !== undefined && { isVeg: body.isVeg === 'true' }),
+      },
+      { new: true },
+    ).lean();
+
+    res.json({ slotId: updated!._id, glbUrl: updated!.glbUrl, usdzUrl: updated!.usdzUrl, status: updated!.status });
+  },
+);
 
 const SlotUpdateSchema = z.object({
   dishName: z.string().min(1).max(100).optional(),

@@ -5,6 +5,17 @@ import { useMenu } from '../hooks/useMenu';
 import MenuDishCard from '../components/MenuDishCard';
 import DishInfoPanel from '../components/DishInfoPanel';
 
+// iOS Quick Look (AR) only activates inside real Safari — Apple blocks the
+// `rel="ar"` handoff in in-app WKWebViews (WhatsApp, Instagram, FB, etc.),
+// even though the page and USDZ file are otherwise perfectly fine.
+const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent);
+const isInAppBrowser = () =>
+  /FBAN|FBAV|FB_IAB|Instagram|Line\/|WhatsApp|MicroMessenger|TikTok|Pinterest|LinkedInApp|Twitter/i.test(
+    navigator.userAgent,
+  );
+const AR_UNSUPPORTED_HINT = 'AR is not supported on this device.';
+const OPEN_IN_SAFARI_HINT = 'Tap ••• (or Share) above and choose "Open in Safari" to view in AR';
+
 export default function MenuARPage() {
   const { restaurantSlug } = useParams<{ restaurantSlug?: string }>();
   const [searchParams] = useSearchParams();
@@ -36,8 +47,8 @@ export default function MenuARPage() {
         setTimeout(() => setHint(null), 3000);
       } else if (status === 'failed') {
         setArStatus('unsupported');
-        setHint('AR is not supported on this device.');
-        setTimeout(() => setHint(null), 4000);
+        setHint(isIOS() && isInAppBrowser() ? OPEN_IN_SAFARI_HINT : AR_UNSUPPORTED_HINT);
+        setTimeout(() => setHint(null), 5000);
       }
     };
 
@@ -57,8 +68,11 @@ export default function MenuARPage() {
 
     if (mv.canActivateAR) {
       mv.activateAR();
+    } else if (isIOS() && isInAppBrowser()) {
+      setHint(OPEN_IN_SAFARI_HINT);
+      setTimeout(() => setHint(null), 5000);
     } else {
-      setHint('AR is not supported on this device.');
+      setHint(AR_UNSUPPORTED_HINT);
       setTimeout(() => setHint(null), 4000);
     }
   };
@@ -87,6 +101,7 @@ export default function MenuARPage() {
           <model-viewer
             ref={modelViewerRef as React.RefObject<HTMLElement>}
             src={selectedDish?.modelUrl ?? ''}
+            {...(selectedDish?.usdzUrl ? { 'ios-src': selectedDish.usdzUrl } : {})}
             ar
             ar-modes="webxr scene-viewer quick-look"
             ar-scale="auto"

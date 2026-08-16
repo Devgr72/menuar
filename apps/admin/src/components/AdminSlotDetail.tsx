@@ -71,6 +71,8 @@ export default function AdminSlotDetail({ restaurantId, restaurantName, restaura
   const [uploadingGlb, setUploadingGlb] = useState<string | null>(null)
   const [metaForm, setMetaForm] = useState<Record<string, { dishName: string; description: string; ingredients: string; price: string; isVeg: boolean }>>({})
   const glbInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const usdzInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const [stagedFiles, setStagedFiles] = useState<Record<string, { glb?: File; usdz?: File }>>({})
   const [qrUrl, setQrUrl] = useState<string | undefined>(initialQrUrl)
   const [regenLoading, setRegenLoading] = useState(false)
   const [regenArUrl, setRegenArUrl] = useState<string | null>(null)
@@ -111,22 +113,25 @@ export default function AdminSlotDetail({ restaurantId, restaurantName, restaura
     }
   }
 
-  async function handleGLBUpload(slot: DishSlot, file: File) {
+  async function handleModelUpload(slot: DishSlot) {
+    const staged = stagedFiles[slot.id]
+    if (!staged?.glb || !staged?.usdz) return
     setUploadingGlb(slot.id)
     try {
       const token = await getCustomToken()
       if (!token) return
       const meta = metaForm[slot.id]
-      await uploadSlotGLB(token, slot.id, file, {
+      await uploadSlotGLB(token, slot.id, staged.glb, staged.usdz, {
         dishName: meta?.dishName || undefined,
         description: meta?.description || undefined,
         ingredients: meta?.ingredients || undefined,
         price: meta?.price ? parseFloat(meta.price) : undefined,
         isVeg: meta?.isVeg,
       })
+      setStagedFiles((f) => ({ ...f, [slot.id]: {} }))
       await loadSlots()
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'GLB upload failed')
+      alert(err instanceof Error ? err.message : '3D model upload failed')
     } finally {
       setUploadingGlb(null)
     }
@@ -328,46 +333,87 @@ export default function AdminSlotDetail({ restaurantId, restaurantName, restaura
               </div>
             )}
 
-            {/* GLB upload */}
-            <div className="flex items-center gap-3 pt-4 border-t border-gray-100">
-              <input
-                type="file"
-                accept=".glb"
-                className="hidden"
-                ref={(el) => { if (el) glbInputRefs.current[slot.id] = el }}
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) handleGLBUpload(slot, file)
-                }}
-              />
-              <button
-                onClick={() => glbInputRefs.current[slot.id]?.click()}
-                disabled={uploadingGlb === slot.id}
-                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white shadow-sm text-sm font-semibold rounded-lg px-4 py-2 transition-colors"
-              >
-                {uploadingGlb === slot.id
-                  ? 'Uploading...'
-                  : slot.status === 'glb_ready'
-                    ? 'Replace 3D Model'
-                    : 'Upload 3D Model (.glb)'}
-              </button>
-              {slot.glbUrl && (
-                <a
-                  href={slot.glbUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1 hover:underline"
+            {/* 3D model upload: GLB (Android AR + in-app viewer) + USDZ (iPhone AR) */}
+            <div className="pt-4 border-t border-gray-100">
+              <p className="text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-2">3D Model — GLB + USDZ required together</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <input
+                  type="file"
+                  accept=".glb"
+                  className="hidden"
+                  ref={(el) => { if (el) glbInputRefs.current[slot.id] = el }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) setStagedFiles((f) => ({ ...f, [slot.id]: { ...f[slot.id], glb: file } }))
+                  }}
+                />
+                <button
+                  onClick={() => glbInputRefs.current[slot.id]?.click()}
+                  disabled={uploadingGlb === slot.id}
+                  className="bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 text-gray-700 shadow-sm text-sm font-semibold rounded-lg px-4 py-2 transition-colors"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                  Preview GLB
-                </a>
-              )}
-              {slot.status === 'glb_ready' && (
-                <span className="text-green-600 text-xs font-semibold flex items-center gap-1 ml-auto">
-                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                  Live in AR
-                </span>
-              )}
+                  {stagedFiles[slot.id]?.glb ? `✓ ${stagedFiles[slot.id]!.glb!.name}` : 'Choose .glb'}
+                </button>
+
+                <input
+                  type="file"
+                  accept=".usdz"
+                  className="hidden"
+                  ref={(el) => { if (el) usdzInputRefs.current[slot.id] = el }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) setStagedFiles((f) => ({ ...f, [slot.id]: { ...f[slot.id], usdz: file } }))
+                  }}
+                />
+                <button
+                  onClick={() => usdzInputRefs.current[slot.id]?.click()}
+                  disabled={uploadingGlb === slot.id}
+                  className="bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 text-gray-700 shadow-sm text-sm font-semibold rounded-lg px-4 py-2 transition-colors"
+                >
+                  {stagedFiles[slot.id]?.usdz ? `✓ ${stagedFiles[slot.id]!.usdz!.name}` : 'Choose .usdz'}
+                </button>
+
+                <button
+                  onClick={() => handleModelUpload(slot)}
+                  disabled={uploadingGlb === slot.id || !stagedFiles[slot.id]?.glb || !stagedFiles[slot.id]?.usdz}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white shadow-sm text-sm font-semibold rounded-lg px-4 py-2 transition-colors"
+                >
+                  {uploadingGlb === slot.id
+                    ? 'Uploading...'
+                    : slot.status === 'glb_ready'
+                      ? 'Replace 3D Model'
+                      : 'Upload 3D Model'}
+                </button>
+
+                {slot.glbUrl && (
+                  <a
+                    href={slot.glbUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1 hover:underline"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                    Preview GLB
+                  </a>
+                )}
+                {slot.usdzUrl && (
+                  <a
+                    href={slot.usdzUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1 hover:underline"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                    Preview USDZ
+                  </a>
+                )}
+                {slot.status === 'glb_ready' && (
+                  <span className="text-green-600 text-xs font-semibold flex items-center gap-1 ml-auto">
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                    Live in AR
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         ))}
