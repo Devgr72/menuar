@@ -94,6 +94,7 @@ export async function getMenuBySlug(restaurantSlug: string) {
         allergens: [] as string[],
         isAvailable: true,
         modelUrl: slot.glbUrl,
+        usdzUrl: slot.usdzUrl,
         thumbnailUrl: slot.menuPhotoUrl,
         modelStatus: 'ready' as const,
         modelSource: 'tripo' as const,

@@ -98,6 +98,8 @@ interface RestaurantDoc {
   _id: unknown;
   slug: string;
   qrUrl?: string;
+  partnerId?: string;
+  name?: string;
 }
 
 /**
@@ -154,6 +156,31 @@ export async function syncPendingSubscriptionWithRazorpay<T extends PendingSubsc
     if (!existingMenu) {
       const menu = await Menu.create({ restaurantId: restaurant._id, name: 'Menu', isActive: true });
       await Category.create({ menuId: menu._id, name: 'Dishes', sortOrder: 0 });
+    }
+
+    // Partner Commission (Fallback for local dev without webhooks)
+    if (restaurant.partnerId) {
+      const { PartnerCommission } = await import('../db/models/index.js');
+      const existing = await PartnerCommission.findOne({ subscriptionId: sub._id, type: 'FIRST_SUBSCRIPTION' }).lean();
+      if (!existing) {
+        await PartnerCommission.create({
+          partnerId: restaurant.partnerId,
+          restaurantId: restaurant._id,
+          subscriptionId: sub._id,
+          type: 'FIRST_SUBSCRIPTION',
+          amount: 150,
+          status: 'PENDING',
+        });
+        import('./notification.service.js').then(({ createPartnerNotification, emitAdminEvent }) => {
+          createPartnerNotification(
+            restaurant.partnerId!,
+            'COMMISSION_EARNED',
+            'Commission Earned 💰',
+            `You earned ₹150 from ${restaurant.name || 'a new restaurant'}.`
+          );
+          emitAdminEvent('admin:commission_earned', { partnerId: restaurant.partnerId, amount: 150 });
+        });
+      }
     }
 
     return updatedSub! as T;

@@ -31,6 +31,7 @@ export async function deleteFile(key: string): Promise<void> {
 
 function getContentType(filename: string): string {
   if (filename.endsWith('.glb')) return 'model/gltf-binary';
+  if (filename.endsWith('.usdz')) return 'model/vnd.usdz+zip';
   if (filename.endsWith('.png')) return 'image/png';
   if (filename.endsWith('.jpg') || filename.endsWith('.jpeg')) return 'image/jpeg';
   if (filename.endsWith('.webp')) return 'image/webp';

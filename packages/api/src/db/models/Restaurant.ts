@@ -15,6 +15,7 @@ export interface IRestaurant {
   heroDescription?: string;
   scanCount: number;
   photosUsed: number;
+  partnerId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -34,6 +35,7 @@ const restaurantSchema = new Schema(
     heroDescription: { type: String },
     scanCount: { type: Number, default: 0 },
     photosUsed: { type: Number, default: 0 },
+    partnerId: { type: String },
   },
   { timestamps: true },
 );

@@ -48,7 +48,7 @@ export default function Partner() {
 
         <Reveal delay={0.2}>
           <div className="mt-9 flex justify-center">
-            <ButtonLink to="/sign-up" variant="navy" size="lg" className="w-full max-w-[340px] rounded-full">
+            <ButtonLink to="/partner/join" variant="navy" size="lg" className="w-full max-w-[340px] rounded-full">
               Join Now &amp; Start Earning
               <ArrowRight className="h-4 w-4" />
             </ButtonLink>

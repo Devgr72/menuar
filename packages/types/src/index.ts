@@ -74,6 +74,8 @@ export interface DishSlot {
   photoUrls?: string[];   // CDN URLs of 3D-angle photos (populated by admin API)
   glbKey?: string;
   glbUrl?: string;
+  usdzKey?: string;
+  usdzUrl?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -90,6 +92,7 @@ export interface Dish {
   ingredients?: string[];
   isAvailable: boolean;
   modelUrl?: string;
+  usdzUrl?: string;
   thumbnailUrl?: string;
   modelStatus: ModelStatus;
   modelSource: ModelSource;
@@ -161,6 +164,7 @@ export interface AdminStats {
   leads: number;
   totalQrScans: number;
   newInquiries: number;
+  totalPartners: number;
 }
 
 /** A landing-page contact submission or newsletter sign-up. */
@@ -258,4 +262,62 @@ export interface UpdateDishInput {
   price?: number;
   ingredients?: string[];
   isVeg?: boolean;
+}
+
+// ─── Partner System ─────────────────────────────────────────────────────────
+
+export interface Partner {
+  id: string;
+  partnerId: string;
+  fullName: string;
+  mobileNumber: string;
+  email: string;
+  city: string;
+  state: string;
+  qualification: string;
+  college?: string;
+  currentStatus: string;
+  salesExperience: string;
+  dailyTime: string;
+  preferredMethod: string;
+  status: 'Active' | 'Inactive';
+  createdAt: string;
+}
+
+export type PartnerNotificationType =
+  | 'RESTAURANT_ONBOARDED'
+  | 'RESTAURANT_APPROVED'
+  | 'RESTAURANT_REJECTED'
+  | 'SUBSCRIPTION_STARTED'
+  | 'COMMISSION_EARNED'
+  | 'RENEWAL_COMMISSION'
+  | 'RESTAURANT_PAYMENT_DUE'
+  | 'PAYOUT_PROCESSED'
+  | 'ACCOUNT_STATUS'
+  | 'GENERAL';
+
+export interface PartnerNotification {
+  id: string;
+  partnerId: string;
+  type: PartnerNotificationType;
+  title: string;
+  message: string;
+  data?: any;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface PartnerRegistrationInput {
+  fullName: string;
+  mobileNumber: string;
+  email: string;
+  city: string;
+  state: string;
+  qualification: string;
+  college?: string;
+  currentStatus: string;
+  salesExperience: string;
+  dailyTime: string;
+  preferredMethod: string;
+  password: string;
 }

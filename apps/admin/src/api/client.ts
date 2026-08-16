@@ -54,12 +54,14 @@ export async function uploadSlotGLB(
   token: string,
   slotId: string,
   glbFile: File,
+  usdzFile: File,
   meta: { dishName?: string; description?: string; ingredients?: string; price?: number; isVeg?: boolean },
-): Promise<{ slotId: string; glbUrl: string; status: string }> {
-  // We need to use standard fetch for file uploads, overriding Content-Type 
+): Promise<{ slotId: string; glbUrl: string; usdzUrl: string; status: string }> {
+  // We need to use standard fetch for file uploads, overriding Content-Type
   // so browser boundary forms correctly.
   const formData = new FormData()
   formData.append('glb', glbFile)
+  formData.append('usdz', usdzFile)
   if (meta.dishName) formData.append('dishName', meta.dishName)
   if (meta.description) formData.append('description', meta.description)
   if (meta.ingredients) formData.append('ingredients', meta.ingredients)
@@ -92,8 +94,72 @@ export async function updateSlotMeta(
   })
 }
 
-export async function getAdminEvents(token: string) {
-  return apiFetch<{ events: unknown[] }>('/api/v1/admin/events', { token })
+export async function getPaymentEvents(page = 1, limit = 50) {
+  return apiFetch<{
+    events: Array<{
+      id: string
+      eventType: string
+      createdAt: string
+      razorpayEventId: string
+      subscription: {
+        id: string
+        status: string
+        amount: number
+        planType: string
+        restaurant: { name: string; slug: string } | null
+        owner: { ownerName: string; email: string } | null
+      } | null
+    }>
+    total: number
+    page: number
+    limit: number
+  }>(`/api/v1/admin/events?page=${page}&limit=${limit}`)
+}
+
+// ==========================================
+// PARTNER MANAGEMENT
+// ==========================================
+
+export async function getPartners(token: string, params: { page?: number; limit?: number; search?: string; status?: string }) {
+  const query = new URLSearchParams();
+  if (params.page) query.append('page', params.page.toString());
+  if (params.limit) query.append('limit', params.limit.toString());
+  if (params.search) query.append('search', params.search);
+  if (params.status) query.append('status', params.status);
+  
+  return apiFetch<any>(`/api/v1/admin/partners?${query.toString()}`, { token });
+}
+
+export async function getPartnerDetails(token: string, partnerId: string) {
+  return apiFetch<any>(`/api/v1/admin/partners/${partnerId}`, { token });
+}
+
+export async function getPartnerRestaurants(token: string, partnerId: string) {
+  return apiFetch<any>(`/api/v1/admin/partners/${partnerId}/restaurants`, { token });
+}
+
+export async function getPartnerCommissions(token: string, partnerId: string) {
+  return apiFetch<any>(`/api/v1/admin/partners/${partnerId}/commissions`, { token });
+}
+
+export async function getPartnerPayouts(token: string, partnerId: string) {
+  return apiFetch<any>(`/api/v1/admin/partners/${partnerId}/payouts`, { token });
+}
+
+export async function updatePartnerStatus(token: string, partnerId: string, status: string) {
+  return apiFetch<any>(`/api/v1/admin/partners/${partnerId}/status`, {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify({ status })
+  });
+}
+
+export async function createPartnerPayout(token: string, partnerId: string, payload: { amount: number; commissionIds: string[]; referenceId?: string }) {
+  return apiFetch<any>(`/api/v1/admin/partners/${partnerId}/payouts`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify(payload)
+  });
 }
 
 export async function regenerateQR(token: string, restaurantId: string): Promise<{ qrUrl: string; arUrl: string }> {

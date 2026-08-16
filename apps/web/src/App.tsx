@@ -42,6 +42,10 @@ import DigitalMenuPage from './pages/DigitalMenuPage'
 import EditDigitalMenuPage from './pages/EditDigitalMenuPage'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import { useAuthState } from './hooks/useAuthState'
+import PartnerRegistrationPage from './pages/PartnerRegistrationPage'
+import PartnerLoginPage from './pages/PartnerLoginPage'
+import PartnerDashboardPage from './pages/PartnerDashboardPage'
+import PartnerProfilePage from './pages/PartnerProfilePage'
 
 /**
  * Guards /sign-in and /sign-up: redirects already-authenticated users to
@@ -64,6 +68,12 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/privacy" element={<LegalPage doc={PRIVACY_POLICY} />} />
         <Route path="/terms" element={<LegalPage doc={TERMS_AND_CONDITIONS} />} />
+
+        {/* Partner pages */}
+        <Route path="/partner/join" element={<PartnerRegistrationPage />} />
+        <Route path="/partner/login" element={<PartnerLoginPage />} />
+        <Route path="/partner/dashboard" element={<PartnerDashboardPage />} />
+        <Route path="/partner/profile" element={<PartnerProfilePage />} />
 
         {/* Public AR experience */}
         <Route path="/ar/:restaurantSlug" element={<MenuARPage />} />

@@ -6,10 +6,15 @@ import { sendVerificationOTPEmail } from '../services/email.service.js'
 
 const { db, client } = getNativeDb()
 
+// Keep in sync with the CORS allowlist in index.ts — trustedOrigins also derives
+// the session cookie's Domain attribute (see advanced.crossSubDomainCookies below),
+// so a missing production origin here silently drops the cookie on that domain.
+const WEB_URL = process.env.WEB_URL || 'https://dishdekho.com';
+
 export const auth = betterAuth({
   database: mongodbAdapter(db, { client }),
   secret: process.env.BETTER_AUTH_SECRET!,
-  baseURL: `${process.env.WEB_URL || 'https://menuar-web.vercel.app'}/api/auth`,
+  baseURL: `${WEB_URL}/api/auth`,
 
   emailAndPassword: { enabled: true, requireEmailVerification: true },
 
@@ -43,7 +48,9 @@ export const auth = betterAuth({
   ],
 
   trustedOrigins: [
-    process.env.WEB_URL || 'https://menuar-web.vercel.app',
+    WEB_URL,
+    'https://dishdekho.com',
+    'https://www.dishdekho.com',
     'https://menuar-web.vercel.app',
     'http://localhost:3000',
     'https://localhost:3000',
@@ -51,7 +58,6 @@ export const auth = betterAuth({
 
   advanced: {
     trustHost: true,
-    crossSubDomainCookies: { enabled: true },
     cookiePrefix: 'dishdekho',
   },
 })

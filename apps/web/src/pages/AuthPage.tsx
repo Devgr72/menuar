@@ -35,10 +35,15 @@ export default function AuthPage({ mode }: Props) {
     return () => clearInterval(timer);
   }, [resendCooldown > 0]);
 
+  // Capture a partner referral code from ?ref= (e.g. /sign-up?ref=<partnerId>) so it
+  // survives email verification and can be attached at /onboarding's /register call.
   useEffect(() => {
+    const ref = new URLSearchParams(location.search).get('ref');
+    if (ref) localStorage.setItem('partnerRef', ref);
+
     if (location.pathname.includes("sign-in")) setActiveMode("sign-in");
     else setActiveMode("sign-up");
-  }, [location.pathname]);
+  }, [location.search, location.pathname]);
 
   const toggleMode = (m: "sign-in" | "sign-up") => {
     setActiveMode(m);
@@ -137,6 +142,11 @@ export default function AuthPage({ mode }: Props) {
     try {
       const { error } = await authClient.emailOtp.verifyEmail({ email, otp });
       if (error) throw new Error(error.message ?? "Invalid or expired code");
+      
+      // After verification, we must explicitly sign the user in
+      const signInResult = await signIn.email({ email, password });
+      if (signInResult.error) throw new Error(signInResult.error.message ?? "Sign in failed after verification");
+
       setFormSuccess("Email verified! Redirecting…");
       setIsRedirecting(true);
       await redirectPostAuth();

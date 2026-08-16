@@ -18,6 +18,8 @@ export interface IDishSlot {
   photoKeys: string[];
   glbKey?: string;
   glbUrl?: string;
+  usdzKey?: string;
+  usdzUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -38,6 +40,8 @@ const dishSlotSchema = new Schema(
     photoKeys: { type: [String], default: [] },
     glbKey: { type: String },
     glbUrl: { type: String },
+    usdzKey: { type: String },
+    usdzUrl: { type: String },
   },
   { timestamps: true },
 );
