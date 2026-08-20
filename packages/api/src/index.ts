@@ -18,6 +18,8 @@ const allowedOrigins = [
   'https://menuar-web.vercel.app',
   'https://www.dishdekho.com',
   'https://dishdekho.com',
+  'https://menuar-admin.vercel.app',
+  'https://admin.dishdekho.com',
   'http://localhost:3000',
   'https://localhost:3000',
   'http://localhost:3002',
@@ -61,7 +63,9 @@ async function main() {
 
   const { isEmailConfigured } = await import('./services/email.service.js');
   if (!isEmailConfigured()) {
-    throw new Error('Email is not configured — set SMTP_HOST, SMTP_USER, SMTP_PASS, SMTP_FROM');
+    console.warn(
+      '⚠ Email is not configured (SMTP_HOST/SMTP_USER/SMTP_PASS/SMTP_FROM) — inquiry notifications and OTP verification emails will silently fail to send.',
+    );
   }
 
   await connectDB();
