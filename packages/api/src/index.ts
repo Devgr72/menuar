@@ -18,6 +18,8 @@ const allowedOrigins = [
   'https://menuar-web.vercel.app',
   'https://www.dishdekho.com',
   'https://dishdekho.com',
+  'https://menuar-admin.vercel.app',
+  'https://admin.dishdekho.com',
   'http://localhost:3000',
   'https://localhost:3000',
   'http://localhost:3002',
