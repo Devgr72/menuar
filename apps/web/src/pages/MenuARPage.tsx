@@ -28,13 +28,36 @@ export default function MenuARPage() {
   const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
   const [arStatus, setArStatus] = useState<'idle' | 'placing' | 'placed' | 'unsupported'>('idle');
   const [hint, setHint] = useState<string | null>(null);
+  const [modelReady, setModelReady] = useState(false);
 
   const modelViewerRef = useRef<HTMLElement | null>(null);
+  const pendingArLaunchRef = useRef(false);
 
   // ── Listen to model-viewer AR lifecycle events ────────────────────────────
   useEffect(() => {
-    const mv = modelViewerRef.current;
+    const mv = modelViewerRef.current as any;
     if (!mv) return;
+
+    // Large models (multi-MB GLB/USDZ) can take a few seconds to download and
+    // parse — `canActivateAR` stays false until then. Track readiness so we
+    // don't report "not supported" just because the model is still loading.
+    setModelReady(false);
+
+    const onLoad = () => {
+      setModelReady(true);
+      if (pendingArLaunchRef.current) {
+        pendingArLaunchRef.current = false;
+        if (mv.canActivateAR) {
+          mv.activateAR();
+        } else if (isIOS() && isInAppBrowser()) {
+          setHint(OPEN_IN_SAFARI_HINT);
+          setTimeout(() => setHint(null), 5000);
+        } else {
+          setHint(AR_UNSUPPORTED_HINT);
+          setTimeout(() => setHint(null), 4000);
+        }
+      }
+    };
 
     const onArStatus = (e: Event) => {
       const status = (e as CustomEvent).detail?.status as string | undefined;
@@ -52,11 +75,13 @@ export default function MenuARPage() {
       }
     };
 
+    mv.addEventListener('load', onLoad);
     mv.addEventListener('ar-status', onArStatus);
     return () => {
+      mv.removeEventListener('load', onLoad);
       mv.removeEventListener('ar-status', onArStatus);
     };
-  }, []);
+  }, [selectedDish?.modelUrl]);
 
   const handleOpenDetail = (dish: Dish) => {
     setSelectedDish(dish);
@@ -65,6 +90,15 @@ export default function MenuARPage() {
   const handleLaunchAR = () => {
     const mv = modelViewerRef.current as any;
     if (!mv) return;
+
+    // Model still downloading/parsing — wait for it instead of prematurely
+    // reporting "not supported". The 'load' handler above will auto-launch
+    // AR the moment the model becomes ready.
+    if (!modelReady && !mv.canActivateAR) {
+      pendingArLaunchRef.current = true;
+      setHint('Loading 3D model…');
+      return;
+    }
 
     if (mv.canActivateAR) {
       mv.activateAR();
