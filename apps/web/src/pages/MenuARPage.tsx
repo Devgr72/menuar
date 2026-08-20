@@ -97,7 +97,11 @@ export default function MenuARPage() {
         {/* ── Scrollable Content Area ── */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden pb-12 relative">
           
-          {/* ── Background AR Host (Invisible until triggered) ────────────────── */}
+          {/* ── Background AR Host (Invisible until triggered) ──────────────────
+              Must stay in layout (not display:none) — model-viewer lazy-loads
+              the model via IntersectionObserver (reveal="auto"), and a
+              display:none element never intersects, so canActivateAR would
+              stay false forever and every AR launch would look "unsupported". */}
           <model-viewer
             ref={modelViewerRef as React.RefObject<HTMLElement>}
             src={selectedDish?.modelUrl ?? ''}
@@ -106,7 +110,7 @@ export default function MenuARPage() {
             ar-modes="webxr scene-viewer quick-look"
             ar-scale="auto"
             ar-placement="floor"
-            style={{ display: 'none' }}
+            style={{ position: 'fixed', top: 0, left: 0, width: '1px', height: '1px', opacity: 0, overflow: 'hidden', pointerEvents: 'none' }}
           >
             <button slot="ar-button" style={{ display: 'none' }} />
           </model-viewer>
