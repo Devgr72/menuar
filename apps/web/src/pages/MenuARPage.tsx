@@ -88,8 +88,33 @@ export default function MenuARPage() {
   };
 
   const handleLaunchAR = () => {
+    // Direct native launch for iOS if USDZ is available.
+    // This avoids downloading the GLB on iOS just to launch the USDZ.
+    if (isIOS() && selectedDish?.usdzUrl) {
+      if (isInAppBrowser()) {
+        setHint(OPEN_IN_SAFARI_HINT);
+        setTimeout(() => setHint(null), 5000);
+        return;
+      }
+      const a = document.createElement('a');
+      a.setAttribute('rel', 'ar');
+      a.setAttribute('href', selectedDish.usdzUrl);
+      const img = document.createElement('img');
+      a.appendChild(img);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
+
     const mv = modelViewerRef.current as any;
     if (!mv) return;
+
+    if (!selectedDish?.modelUrl) {
+      setHint(AR_UNSUPPORTED_HINT);
+      setTimeout(() => setHint(null), 4000);
+      return;
+    }
 
     // Model still downloading/parsing — wait for it instead of prematurely
     // reporting "not supported". The 'load' handler above will auto-launch
@@ -102,9 +127,6 @@ export default function MenuARPage() {
 
     if (mv.canActivateAR) {
       mv.activateAR();
-    } else if (isIOS() && isInAppBrowser()) {
-      setHint(OPEN_IN_SAFARI_HINT);
-      setTimeout(() => setHint(null), 5000);
     } else {
       setHint(AR_UNSUPPORTED_HINT);
       setTimeout(() => setHint(null), 4000);

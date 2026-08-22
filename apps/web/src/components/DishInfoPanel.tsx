@@ -113,7 +113,7 @@ export default function DishInfoPanel({ dish, onClose, onViewAR }: DishInfoPanel
             )}
 
             {/* AR Button — only shown when this dish actually has a 3D model */}
-            {dish.modelUrl && (
+            {(dish.modelUrl || dish.usdzUrl) && (
               <button
                 onClick={onViewAR}
                 className="w-full flex items-center justify-center gap-3 py-5 rounded-[1.5rem] bg-[#0F2747] hover:bg-[#FF6B00] text-white shadow-xl shadow-[#0F274720] transition-all duration-300 transform active:scale-[0.98]"
