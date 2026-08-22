@@ -214,12 +214,8 @@ router.post(
     const glbFile = files?.glb?.[0];
     const usdzFile = files?.usdz?.[0];
 
-    if (!glbFile) {
-      res.status(400).json({ error: 'No GLB file provided', code: 'NO_FILE' });
-      return;
-    }
-    if (!usdzFile) {
-      res.status(400).json({ error: 'No USDZ file provided', code: 'NO_FILE' });
+    if (!glbFile && !usdzFile) {
+      res.status(400).json({ error: 'No GLB or USDZ file provided', code: 'NO_FILE' });
       return;
     }
 
@@ -229,24 +225,29 @@ router.post(
       return;
     }
 
-    // Delete old model files if they exist
-    if (slot.glbKey) await deleteFile(slot.glbKey).catch(() => {});
-    if (slot.usdzKey) await deleteFile(slot.usdzKey).catch(() => {});
-
     const dir = `models/${slot.restaurantId}/slot-${slot.slotNumber}`;
-    const [{ key: glbKey, url: glbUrl }, { key: usdzKey, url: usdzUrl }] = await Promise.all([
-      saveFile(dir, 'dish.glb', glbFile.buffer),
-      saveFile(dir, 'dish.usdz', usdzFile.buffer),
-    ]);
+    let glbKey, glbUrl, usdzKey, usdzUrl;
+
+    if (glbFile) {
+      if (slot.glbKey) await deleteFile(slot.glbKey).catch(() => {});
+      const result = await saveFile(dir, 'dish.glb', glbFile.buffer);
+      glbKey = result.key;
+      glbUrl = result.url;
+    }
+
+    if (usdzFile) {
+      if (slot.usdzKey) await deleteFile(slot.usdzKey).catch(() => {});
+      const result = await saveFile(dir, 'dish.usdz', usdzFile.buffer);
+      usdzKey = result.key;
+      usdzUrl = result.url;
+    }
 
     const body = req.body as Record<string, string>;
     const updated = await DishSlot.findByIdAndUpdate(
       slot._id,
       {
-        glbKey,
-        glbUrl,
-        usdzKey,
-        usdzUrl,
+        ...(glbKey && { glbKey, glbUrl }),
+        ...(usdzKey && { usdzKey, usdzUrl }),
         status: 'glb_ready',
         ...(body.dishName && { dishName: body.dishName }),
         ...(body.description && { description: body.description }),

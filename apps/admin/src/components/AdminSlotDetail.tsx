@@ -115,7 +115,7 @@ export default function AdminSlotDetail({ restaurantId, restaurantName, restaura
 
   async function handleModelUpload(slot: DishSlot) {
     const staged = stagedFiles[slot.id]
-    if (!staged?.glb || !staged?.usdz) return
+    if (!staged?.glb && !staged?.usdz) return
     setUploadingGlb(slot.id)
     try {
       const token = await getCustomToken()
