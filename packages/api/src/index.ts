@@ -64,7 +64,7 @@ async function main() {
   const { isEmailConfigured } = await import('./services/email.service.js');
   if (!isEmailConfigured()) {
     console.warn(
-      '⚠ Email is not configured (SMTP_HOST/SMTP_USER/SMTP_PASS/SMTP_FROM) — inquiry notifications and OTP verification emails will silently fail to send.',
+      '⚠ Email is not configured (BREVO_API_KEY/SMTP_FROM) — inquiry notifications and OTP verification emails will silently fail to send.',
     );
   }
 

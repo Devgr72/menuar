@@ -42,6 +42,7 @@ export const auth = betterAuth({
           console.log(`[auth] successfully sent OTP email to ${email}`);
         } catch (err) {
           console.error(`[auth] failed to send OTP email:`, err);
+          throw err;
         }
       },
     }),
